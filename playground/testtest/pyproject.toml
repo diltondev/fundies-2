@@ -1,0 +1,24 @@
+[project]
+name = "testtest"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Dalton Harrold", email = "djharrold1@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "ty>=0.0.12",
+]
+
+[project.scripts]
+testtest = "testtest:main"
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
