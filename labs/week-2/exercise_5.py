@@ -18,11 +18,35 @@ def personality_mapping(villagers: dict[str, str]) -> dict[str, list[str]]:
     Returns:
         Dictionary mapping personality type to sorted list of villager names
     """
-    # YOUR CODE HERE
-    # Remove pass when you implement
-    pass
+    
+    personalities: dict[str, list[str]] = dict()
+    for v, p in villagers.items():
+        if p not in personalities:
+            personalities[p] = []
+        personalities[p].append(v)
+    return personalities
 
 
-# YOUR TESTS HERE (BONUS)
-# Write at least 3 tests for invert_personality_mapping
-# Test function names must start with "test_"
+
+def test_personality_mapping_basic():
+    villagers = {"Maple": "Normal", "Raymond": "Smug", "Sherb": "Lazy"}
+    assert personality_mapping(villagers) == {
+        "Normal": ["Maple"],
+        "Smug": ["Raymond"],
+        "Lazy": ["Sherb"],
+    }
+    
+def test_personality_mapping_duplicates():
+    villagers = {
+        "Maple": "Normal",
+        "Stitches": "Normal",
+        "Raymond": "Smug",
+        "Bob": "Smug",
+    }
+    assert personality_mapping(villagers) == {
+        "Normal": ["Maple", "Stitches"],
+        "Smug": ["Raymond", "Bob"],
+    }
+    
+def test_personality_mapping_empty():
+    assert personality_mapping({}) == {}

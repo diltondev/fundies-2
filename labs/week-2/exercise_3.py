@@ -34,6 +34,38 @@ def find_common_and_unique(set_a: set[str], set_b: set[str]) -> dict[str, set[st
     }
 
 
-# YOUR TESTS HERE
-# Write at least 5 tests for find_common_and_unique
-# Test function names must start with "test_"
+def test_find_common_and_unique_all_overlap():
+    result = find_common_and_unique(set_a={"apple", "banana", "orange", "kiwi", "watermelon"}, set_b={"apple", "banana", "orange", "kiwi", "watermelon"}) 
+    assert result['common'] == {"apple", "banana", "orange", "kiwi", "watermelon"}
+    assert result['only_a'] == set()
+    assert result['only_b'] == set()
+    
+def test_find_common_and_unique_no_overlap():
+    set_a = {"apple", "banana", "orange", "kiwi", "watermelon"}
+    set_b = {"pear", "grape", "pineapple", "mango", "papaya"}
+    result = find_common_and_unique(set_a=set_a, set_b=set_b)
+    assert result['common'] == set()
+    assert result['only_a'] == set_a
+    assert result['only_b'] == set_b
+    
+def test_find_common_and_unique_empty_set():
+    result = find_common_and_unique(set(), set())
+    assert result['common'] == set()
+    assert result['only_a'] == set()
+    assert result['only_b'] == set()
+    
+def test_find_common_and_unique_case_differences():
+    list_a = {"APPLE", "Banana", "orange", "kiwi", "waTerMelon"}
+    list_b = {"apple", "banana", "orange", "KIWI", "watermelon"}
+    result = find_common_and_unique(set_a=list_a, set_b=list_b)
+    assert result['common'] == {"orange"}
+    assert result['only_a'] == {"APPLE", "Banana", "kiwi", "waTerMelon"}
+    assert result['only_b'] == {"apple", "banana", "KIWI", "watermelon"}
+    
+def test_find_common_and_unique_with_repeats():
+    list_a = {"apple", "apple", "orange", "orange", "watermelon"}
+    list_b = {"apple", "banana", "banana", "orange", "orange"}
+    result = find_common_and_unique(set_a=list_a, set_b=list_b)
+    assert result['common'] == {"apple", "orange"}
+    assert result['only_a'] == {"watermelon"}
+    assert result['only_b'] == {"banana"}

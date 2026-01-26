@@ -21,9 +21,7 @@ def process_game_ratings(ratings: list[int]) -> list[int]:
     Returns:
         Sorted list of valid ratings in ascending order
     """
-    # YOUR CODE HERE
-    # Remove pass when you implement
-    pass
+    return sorted([rate for rate in ratings if (rate >= 1 and rate <= 10)])
 
 
 def test_process_game_ratings_basic():

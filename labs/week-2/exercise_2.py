@@ -19,9 +19,7 @@ def get_high_performers(participants: list[tuple[str, int, str]]) -> list[str]:
     Returns:
         List of names of high-performing participants
     """
-    # YOUR CODE HERE
-    # Remove pass when you implement
-    pass
+    return [name for name, points, _ in participants if points > 75]
 
 
 def test_get_high_performers_all_qualify():
