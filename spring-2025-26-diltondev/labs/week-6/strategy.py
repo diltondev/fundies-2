@@ -5,8 +5,7 @@ from observer import Spawn
 
 class SortStrategy(ABC):
     @abstractmethod
-    def sort(self, spawns: list[Spawn]) -> list[Spawn]:
-        ...
+    def sort(self, spawns: list[Spawn]) -> list[Spawn]: ...
 
 
 class SortByName(SortStrategy):
@@ -20,14 +19,14 @@ class SortByDistance(SortStrategy):
     """Sorts spawns ascending by distance (closest first)."""
 
     def sort(self, spawns: list[Spawn]) -> list[Spawn]:
-        pass  # TODO
+        return sorted(spawns, key=lambda s: s.distance_km)
 
 
 class SortByCP(SortStrategy):
     """Sorts spawns descending by CP (highest first)."""
 
     def sort(self, spawns: list[Spawn]) -> list[Spawn]:
-        pass  # TODO
+        return sorted(spawns, key=lambda s: s.cp, reverse=True)
 
 
 class NearbyList:
@@ -36,13 +35,14 @@ class NearbyList:
     The strategy can be swapped at runtime using `set_strategy`.
     """
 
+    _strategy: SortStrategy
+
     def __init__(self, strategy: SortStrategy) -> None:
-        pass  # TODO
+        self._strategy = strategy
 
     def set_strategy(self, strategy: SortStrategy) -> None:
-        """Replace the current sorting strategy."""
-        pass  # TODO
+        self._strategy = strategy
 
     def generate(self, spawns: list[Spawn]) -> list[Spawn]:
         """Return spawns sorted according to the current strategy."""
-        pass  # TODO
+        return self._strategy.sort(spawns)

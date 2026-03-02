@@ -3,7 +3,10 @@ def log_spawn(func):
 
     Prints: [LOG] <spawn_point_name>: Spawning <pokemon_name>
     """
+
     def wrapper(self, *args, **kwargs):
-        # TODO: print a log line using self.name and args[0]
-        pass
+        print(f"[LOG] {self.name}: Spawning {args[0]}")
+        # print(f'Self: {self}, Args: {args}, Kwargs: {kwargs}')
+        return func(self, *args, **kwargs)
+
     return wrapper

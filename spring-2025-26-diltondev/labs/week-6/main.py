@@ -11,7 +11,7 @@ def main() -> None:
     point.subscribe(PlayerAlert("Gary"))
     point.subscribe(RareBroadcast())
 
-    point.spawn("Rattata", cp=120,  rarity="common", distance_km=0.1)
+    point.spawn("Rattata", cp=120, rarity="common", distance_km=0.1)
     point.spawn("Snorlax", cp=1800, rarity="uncommon", distance_km=0.8)
     point.spawn("Dragonite", cp=2800, rarity="rare", distance_km=0.3)
     point.spawn("Pidgey", cp=80, rarity="common", distance_km=0.5)
