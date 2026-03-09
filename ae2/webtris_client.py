@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from abc import ABC, abstractmethod
+from typing import Literal
 from requests import request
 
 class TrafficObservation():
@@ -231,7 +232,49 @@ class SitesRequest(RequestStrategy):
 
 
 class ReportRequest(RequestStrategy):
-    pass
+    """
+    A class to request a list of all sites from the /reports endpoint.
+    `response` will hold the response in the form of `ReportRequest.Response` after the `send()` method is called.
+    
+    Attributes
+    ----------
+    ENDPOINT: str, static
+        The endpoint for site requests on the API. This should not be changed.
+    response: SitesRequest.Response, readonly
+        The response from the API on this request. Must call `this.send()` to not recieve None
+    report_type: "daily" | "monthly" | "annual"
+        The type of report to fetch. Default daily. Daily reports provide 15-min interval data,
+        Monthly is agregated by day of week, and Annual is aggregated by month. **Annual and Monthly are not yet implemented** 
+    
+    Methods
+    -------
+    send() -> None
+        Sends a request to the API and stores the response in `response`
+    """
+    
+    @staticmethod
+    @property
+    def ENDPOINT() -> str: "/reports"     # The endpoint for requesting reports
+    
+    _report_type: str
+    @property
+    def report_type(self) -> str:
+        return self._report_type
+    @report_type.setter
+    def report_type(self, new_report_type: Literal["daily", "monthly", "annual"]) -> None:
+        new_report_type = new_report_type.lower()
+        if not isinstance(new_report_type, str):
+            raise ValueError("Cannot assign non-string to report_type")
+        if not (new_report_type == "daily" or new_report_type == "montly" or new_report_type == "annual"):
+            raise ValueError("Cannot assign non-comliant string to report_type. Must be \"daily\", \"monthly\", or \"annual\"")
+        if new_report_type == "montly" or new_report_type == "annual":
+            raise NotImplementedError("Sorry, the monthly and annual report types are not implemented yet.")
+        self._report_type = type
+        
+    @dataclass(frozen=True)
+    class Response:
+        pass
+        
         
         
         
