@@ -93,95 +93,145 @@ class WebTRISClient():
     @property
     def API_URL() -> str: "https://webtris.nationalhighways.co.uk/api/v1.0"
     
+    class FetchError(Exception):
+        def __init__(self, status_code: int, status_message: str = ""):
+            super().__init__(f"Recieved a non-okay status when fetching!\nError code: {status_code}\nDetails: {status_message}")
+        
+        
     
-    class RequestStrategy(ABC):
+    
+class RequestStrategy(ABC):
+    """
+    An abstract class for request attibute and send method.
+    This class is meant to be used as a strategy
+    """
+    
+    @abstractmethod
+    @property
+    def request(this) -> any:
+        pass
+    
+    @abstractmethod
+    def send(this) -> None:
+        pass
+    
+    
+class SitesRequest(RequestStrategy):
+    """
+    A class to request a list of all sites from the /sites endpoint.
+    `response` will hold the response in the form of `SitesRequest.Response` after the `send()` method is called.
+    
+    Attributes
+    ----------
+    ENDPOINT: str, static
+        The endpoint for site requests on the API. This should not be changed.
+    response: SitesRequest.Response, readonly
+        This is the response from the API on this request. Must call `this.send()` to not recieve None
+    
+    Methods
+    -------
+    send() -> None
+        Sends a request to the API and stores the response in `response`
+    """
+    
+    @staticmethod
+    @property
+    def ENDPOINT() -> str: "/sites"     # The endpoint for requesting sites
+    
+    
+    @dataclass(frozen=True)
+    class Response():
         """
-        A nested class for WebTRISClient specific request parameters.
-        This is an abstract method meant to be used as a strategy
+        The response type specific to the `SitesRequest` request type.
+        This class is a frozen dataclass and cannot have its attributes modified.
+        
+        Attributes
+        ----------
+        row_count: int, readonly
+            The number of rows in the API response. May differ from `len(sites)` due to silent exclusion of faulty data.
+        sites: list[Response._Site], readonly
+            The list of all sites returned from the API.
         """
-        
-        @abstractmethod
-        def send(this) -> None:
-            pass
-        
-        
-    class SitesRequest(RequestStrategy):
-        """
-        A class to request a list of all sites from the /sites endpoint.
-        `response` will hold the response in the form of `SitesRequest.Response` after the `send()` method is called.
-        """
-        
-        @staticmethod
-        @property
-        def ENDPOINT() -> str: "/sites"     # The endpoint for requesting sites
-        
         
         @dataclass(frozen=True)
-        class Response():
+        class _Site():
             """
-            The response type specific to the `SitesRequest` request type.
-            This class is a frozen dataclass and cannot have its attributes modified.
+            A frozen dataclass representing one site in a `SitesRequest.Response`
+            
+            Attributes
+            ----------
+            id: int, readonly
+                The ID of the site
+            name: str, readonly
+                A human-readable description of the site's location
+            id: str, readonly
+                Location id by motorway/markerpost
+            longitude: float, readonly
+                The longitude of the location
+            latitude: float, readonly
+                The latitude of the location
+            status: str, readonly
+                Either "Active" or "Inactive" 
             """
-            
-            @dataclass(frozen=True)
-            class _Site():
-                """
-                A frozen dataclass representing one site in a `SitesRequest.Response`
-                """
-                id: int
-                name: str
-                description: str
-                longitude: float
-                latitude: float
-                status: str
-            
-            row_count: int
-            sites: list[_Site]
-            
-  
-        _response: Response | None
-        @property 
-        def response(this) -> Response | None: 
-            return this._response
+            id: int
+            name: str
+            description: str
+            longitude: float
+            latitude: float
+            status: str
         
-        def send(this) -> None:
-            """
-            This method sends a request to the sites endpoint. It stores the response in `this._response`.
-            Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
-            """
-            res = request("GET", WebTRISClient.API_URL + WebTRISClient.SitesRequest.ENDPOINT).json()
-            sites_response = WebTRISClient.SitesRequest.Response(row_count=res["row_count"], sites=[])
-            for site in res["sites"]:
-                # Check data for validity and silently exclude faulty sites
-                if not ("Id" in site and "Name" in site and "Description" in site and "Longitude" in site and "Latitude" in site and "Status" in site):
-                    continue # Exclude API response sites missing a field
-                try:
-                    _ = int(site["Id"])
-                except ValueError:
-                    continue # Exclude non-numeric or missing ID's
-                if site["Name"] == "": continue
-                if site["Description"] == "": continue
-                if site["Longitude"] == 0.0 or site["Latitude"] == 0.0: continue # Latitude and Longitude are 14-digit precise: won't be at exactly 0.0
-                if site["Status"] == "": continue
-                sites_response.sites.append(
-                    WebTRISClient.SitesRequest.Response._Site(
-                        id=int(site["Id"]),
-                        name=site["Name"],
-                        description=site["Description"],
-                        longitude=site["Longitude"],
-                        latitude=site["Latitude"],
-                        status=site["Status"]
-                    )
+        row_count: int
+        sites: list[_Site]
+        
+
+    _response: Response | None
+    @property 
+    def response(this) -> Response | None: 
+        return this._response
+    
+    def send(this) -> None:
+        """
+        This method sends a request to the sites endpoint. It stores the response in `this._response`.
+        Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
+        """
+        res = request("GET", WebTRISClient.API_URL + WebTRISClient.SitesRequest.ENDPOINT)
+        if not res.ok:
+            raise WebTRISClient.FetchError(res.status_code, res.reason)
+        data = res.json()
+        sites_response = WebTRISClient.SitesRequest.Response(row_count=data["row_count"], sites=[])
+        for site in data["sites"]:
+            # Check data for validity and silently exclude faulty sites
+            if not ("Id" in site and "Name" in site and "Description" in site and "Longitude" in site and "Latitude" in site and "Status" in site):
+                continue # Exclude API response sites missing a field
+            try:
+                _ = int(site["Id"])
+            except ValueError:
+                continue # Exclude non-numeric or missing ID's
+            if site["Name"] == "": continue
+            if site["Description"] == "": continue
+            if site["Longitude"] == 0.0 or site["Latitude"] == 0.0: continue # Latitude and Longitude are 14-digit precise: won't be at exactly 0.0
+            if site["Status"] == "": continue
+            sites_response.sites.append(
+                WebTRISClient.SitesRequest.Response._Site(
+                    id=int(site["Id"]),
+                    name=site["Name"],
+                    description=site["Description"],
+                    longitude=site["Longitude"],
+                    latitude=site["Latitude"],
+                    status=site["Status"]
                 )
-            this.response = sites_response
-            
-        
-        
-        def __init__(this):
-            """
-            Returns a new SitesRequest object with no response stored
-            """
-            this.response = None
+            )
+        this.response = sites_response    
+    
+    def __init__(this):
+        """
+        Returns a new SitesRequest object with no response stored
+        """
+        this.response = None
+
+
+class ReportRequest(RequestStrategy):
+    pass
         
         
         
