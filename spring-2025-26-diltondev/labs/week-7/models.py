@@ -1,0 +1,112 @@
+"""Model classes for iTunes Search API results."""
+
+
+class Track:
+    """A single track from an album."""
+
+    def __init__(
+        self,
+        track_id: int,
+        name: str,
+        track_number: int,
+        duration_ms: int,
+        preview_url: str,
+    ) -> None:
+        self.track_id = track_id
+        self.name = name
+        self.track_number = track_number
+        self.duration_ms = duration_ms
+        self.preview_url = preview_url
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Track":
+        return cls(
+            track_id=data["trackId"],
+            name=data["trackName"],
+            track_number=data.get("trackNumber", 0),
+            duration_ms=data.get("trackTimeMillis", 0),
+            preview_url=data.get("previewUrl", ""),
+        )
+
+    @property
+    def duration_formatted(self) -> str:
+        """Convert milliseconds to M:SS format."""
+        total_seconds = self.duration_ms // 1000
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes}:{seconds:02d}"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.duration_formatted})"
+
+    def __repr__(self) -> str:
+        return f"Artist(artist_id={self.artist_id}, name='{self.name}', genre='{self.genre}')"
+
+
+# Step 1: Implement Artist
+
+class Artist:
+    """An artist returned by the search endpoint.
+
+    Attributes:
+        artist_id (int): unique iTunes artist ID
+        name (str): display name
+        genre (str): primary genre
+    """
+
+    def __init__(self) -> None:
+        # TODO: accept and store artist_id, name, genre
+        ...
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Artist":
+        # TODO: construct an Artist from an API dictionary
+        # Keys: "artistId", "artistName", "primaryGenreName"
+        ...
+
+    def __str__(self) -> str:
+        # TODO: return "Name (Genre)"
+        ...
+
+    def __repr__(self) -> str:
+        return f"Artist(artist_id={self.artist_id}, name='{self.name}')"
+
+
+
+# Step 2: Implement Album
+
+class Album:
+    """An album returned by the lookup endpoint.
+
+    Attributes:
+        collection_id (int): unique iTunes collection ID
+        name (str): album title
+        artist_name (str): artist display name
+        track_count (int): number of tracks
+        release_year (int): four-digit year e.g. 2011
+        genre (str): primary genre
+        artwork_url (str): URL to 100x100 artwork
+        tracks (list[Track]): populated later by the API client
+    """
+
+    def __init__(self) -> None:
+        # TODO: accept and store all attributes listed above
+        # Initialise self.tracks as an empty list
+        ...
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Album":
+        # TODO: construct an Album from an API dictionary
+        # Keys: "collectionId", "collectionName", "artistName",
+        #        "trackCount", "releaseDate", "primaryGenreName",
+        #        "artworkUrl100"
+        #
+        # Hint: extract year with data["releaseDate"][:4] and convert to int
+        ...
+
+    def __str__(self) -> str:
+        # TODO: return "Name (Year) - N tracks"
+        ...
+
+    def __repr__(self) -> str:
+        return f"Album(collection_id={self.collection_id}, name='{self.name}')"
