@@ -24,8 +24,12 @@ class Discography:
         3. Assign the result to album.tracks
         4. Sleep 3 seconds to respect the rate limit (use time.sleep)
         """
-        # TODO
-        ...
+        for album in self.albums:
+            print(f"Loading tracks for \"{album.name}\"")
+            for track in api.get_tracks(collection_id=album.collection_id):
+                album.tracks.append(track)
+            print(f"Fetched all tracks for \"{album.name}\"")
+            time.sleep(1)
 
     # Step 2: display
 
@@ -40,5 +44,7 @@ class Discography:
         Hint: use an f-string with padding to align the columns, e.g.
           f"  {track.track_number:>2}. {track.name:<30} {track.duration_formatted}"
         """
-        # TODO
-        ...
+        for album in self.albums:
+            print(f"\n{str(album)}")
+            for track in sorted(album.tracks, key=lambda x: x.track_number):
+                print(f"  {track.track_number:>2}. {track.name:<30} {track.duration_formatted}")

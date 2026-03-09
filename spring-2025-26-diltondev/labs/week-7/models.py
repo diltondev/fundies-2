@@ -54,19 +54,22 @@ class Artist:
         genre (str): primary genre
     """
 
-    def __init__(self) -> None:
-        # TODO: accept and store artist_id, name, genre
-        ...
+    
+    def __init__(self, artist_id: int, name: str, genre: str) -> None:
+        self.artist_id = artist_id
+        self.name = name
+        self.genre = genre
 
     @classmethod
     def from_dict(cls, data: dict) -> "Artist":
-        # TODO: construct an Artist from an API dictionary
-        # Keys: "artistId", "artistName", "primaryGenreName"
-        ...
+        return cls(
+            artist_id=data.get("artistId"),
+            name=data.get("artistName", "Unknown"),
+            genre=data.get("primaryGenreName", "Unknown")
+        )
 
     def __str__(self) -> str:
-        # TODO: return "Name (Genre)"
-        ...
+        return f"{self.name} ({self.genre})"
 
     def __repr__(self) -> str:
         return f"Artist(artist_id={self.artist_id}, name='{self.name}')"
@@ -89,24 +92,39 @@ class Album:
         tracks (list[Track]): populated later by the API client
     """
 
-    def __init__(self) -> None:
-        # TODO: accept and store all attributes listed above
-        # Initialise self.tracks as an empty list
-        ...
+    def __init__(
+        self, 
+        collection_id: int, 
+        name: str, 
+        artist_name: str, 
+        track_count: str, 
+        release_year: int,
+        genre: str,
+        artwork_url: str
+    ) -> None:
+        self.collection_id = collection_id
+        self.name = name
+        self.artist_name = artist_name
+        self.track_count = track_count
+        self.release_year = release_year
+        self.genre = genre
+        self.artwork_url = artwork_url
+        self.tracks: list[Track] = []
 
     @classmethod
     def from_dict(cls, data: dict) -> "Album":
-        # TODO: construct an Album from an API dictionary
-        # Keys: "collectionId", "collectionName", "artistName",
-        #        "trackCount", "releaseDate", "primaryGenreName",
-        #        "artworkUrl100"
-        #
-        # Hint: extract year with data["releaseDate"][:4] and convert to int
-        ...
+        return cls(
+            collection_id=data.get("collectionId"),
+            name=data.get("collectionName"),
+            artist_name=data.get("artistName"),
+            track_count=data.get("trackCount"),
+            release_year=str(data.get("releaseDate")).strip()[:4],
+            genre=data.get("primaryGenreName"),
+            artwork_url=data.get("artworkUrl100")
+        )
 
     def __str__(self) -> str:
-        # TODO: return "Name (Year) - N tracks"
-        ...
+        return f"{self.name} ({self.release_year}) - {self.track_count} tracks"
 
     def __repr__(self) -> str:
         return f"Album(collection_id={self.collection_id}, name='{self.name}')"

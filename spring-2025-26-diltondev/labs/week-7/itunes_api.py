@@ -32,8 +32,19 @@ class ITunesAPI:
 
         Return a list of Artist objects built with Artist.from_dict().
         """
-        # TODO: implement this method
-        ...
+        response = requests.get(SEARCH_URL, params = {
+            "term": term,
+            "entity": "musicArtist",
+            "country": COUNTRY,
+            "limit": limit,
+        }, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        artists: list[Artist] = []
+        for artist in data["results"]:
+            artists.append(Artist.from_dict(artist))
+        return artists
+            
 
     # Step 2: get_albums
 
@@ -50,8 +61,23 @@ class ITunesAPI:
 
         Return a list of Album objects.
         """
-        # TODO: implement this method
-        ...
+        response = requests.get(LOOKUP_URL,
+                                params={
+                                    "id": artist_id,
+                                    "entity": "album",
+                                    "country": COUNTRY,
+                                })
+        response.raise_for_status()
+        data = response.json()
+        albums: list[Album] = []
+        if "results" not in data:
+            raise ValueError("Results not found in get_albums() call")
+        for item in data["results"]:
+            if not "wrapperType" in item or item["wrapperType"] != "collection":
+                continue
+            albums.append(Album.from_dict(item))
+        return albums
+            
 
     # Step 3: get_tracks
 
@@ -68,5 +94,19 @@ class ITunesAPI:
 
         Return a list of Track objects.
         """
-        # TODO: implement this method
-        ...
+        response = requests.get(LOOKUP_URL,
+                                params={
+                                    "id": collection_id,
+                                    "entity": "song",
+                                    "country": COUNTRY,
+                                })
+        response.raise_for_status()
+        data = response.json()
+        tracks: list[Track] = []
+        if "results" not in data:
+            raise ValueError("Results not found in get_tracks() call")
+        for item in data["results"]:
+            if not "wrapperType" in item or item["wrapperType"] != "track":
+                continue
+            tracks.append(Track.from_dict(item))
+        return tracks
