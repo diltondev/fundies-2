@@ -45,6 +45,7 @@ class Track:
 
 # Step 1: Implement Artist
 
+
 class Artist:
     """An artist returned by the search endpoint.
 
@@ -54,7 +55,6 @@ class Artist:
         genre (str): primary genre
     """
 
-    
     def __init__(self, artist_id: int, name: str, genre: str) -> None:
         self.artist_id = artist_id
         self.name = name
@@ -65,7 +65,7 @@ class Artist:
         return cls(
             artist_id=data.get("artistId"),
             name=data.get("artistName", "Unknown"),
-            genre=data.get("primaryGenreName", "Unknown")
+            genre=data.get("primaryGenreName", "Unknown"),
         )
 
     def __str__(self) -> str:
@@ -75,8 +75,8 @@ class Artist:
         return f"Artist(artist_id={self.artist_id}, name='{self.name}')"
 
 
-
 # Step 2: Implement Album
+
 
 class Album:
     """An album returned by the lookup endpoint.
@@ -93,14 +93,14 @@ class Album:
     """
 
     def __init__(
-        self, 
-        collection_id: int, 
-        name: str, 
-        artist_name: str, 
-        track_count: str, 
+        self,
+        collection_id: int,
+        name: str,
+        artist_name: str,
+        track_count: str,
         release_year: int,
         genre: str,
-        artwork_url: str
+        artwork_url: str,
     ) -> None:
         self.collection_id = collection_id
         self.name = name
@@ -120,7 +120,7 @@ class Album:
             track_count=data.get("trackCount"),
             release_year=str(data.get("releaseDate")).strip()[:4],
             genre=data.get("primaryGenreName"),
-            artwork_url=data.get("artworkUrl100")
+            artwork_url=data.get("artworkUrl100"),
         )
 
     def __str__(self) -> str:
