@@ -1,24 +1,19 @@
 """All classes for the application"""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from abc import ABC, abstractmethod
-import math
+from datetime import datetime
 from collections.abc import Iterator
-from requests import request
+from requests import request, Timeout, ConnectionError, HTTPError
 
 
 class WebTRISClient:
-    @staticmethod
-    @property
-    def API_URL() -> str:
-        "https://webtris.nationalhighways.co.uk/api/v1.0"
+    API_URL = "https://webtris.nationalhighways.co.uk/api/v1.0"
 
-    class FetchError(Exception):
-        def __init__(self, status_code: int, status_message: str = ""):
-            super().__init__(
-                f"Recieved a non-okay status when fetching!\nError code: {status_code}\nDetails: {status_message}"
-            )
+    # class FetchError(Exception):
+    #     def __init__(self, status_code: int, status_message: str = ""):
+    #         super().__init__(
+    #             f"Recieved a non-okay status when fetching!\nError code: {status_code}\nDetails: {status_message}"
+    #         )
 
 
 class SitesRequest:
@@ -36,11 +31,8 @@ class SitesRequest:
     send() -> `SitesRequest.SitesResponse`
         Sends a request to the API and returns the response. Throws errors if `not status.ok`. Otherwise silently excludes deformed data.
     """
-
-    @staticmethod
-    @property
-    def ENDPOINT() -> str:
-        "/sites"  # The endpoint for requesting sites
+    
+    ENDPOINT = "/sites"  # The endpoint for requesting sites
 
     @dataclass(frozen=True)
     class SitesResponse:
@@ -100,21 +92,28 @@ class SitesRequest:
                     and "Latitude" in site
                     and "Status" in site
                 ):
+                    print(f"Excluding site with missing field(s): {site}")
                     continue  # Exclude API response sites missing a field
                 try:
                     _ = int(site["Id"])
                 except ValueError:
+                    print(f"Excluding site with non-numeric ID `{site['Id']}`")
                     continue  # Exclude non-numeric or missing ID's
                 if site["Name"] == "":
+                    print(f"Excluding site with empty name: {site}")
                     continue
                 if site["Description"] == "":
+                    print(f"Excluding site with empty description: {site}")
                     continue
                 if site["Longitude"] == 0.0 or site["Latitude"] == 0.0:
+                    print(f"Excluding site with invalid longitude/latitude: {site}")
                     continue  # Latitude and Longitude are 14-digit precise: won't be at exactly 0.0
                 if site["Status"] == "":
+                    print(f"Excluding site with empty status: {site}")
                     continue
+                    
                 sites_response.sites.append(
-                    WebTRISClient.SitesRequest.Response._Site(
+                    cls._Site(
                         id=int(site["Id"]),
                         name=site["Name"],
                         description=site["Description"],
@@ -123,18 +122,24 @@ class SitesRequest:
                         status=site["Status"],
                     )
                 )
-                return sites_response
+            return sites_response
 
     def send(this) -> SitesResponse:
         """
         This method sends a request to the sites endpoint. It stores the response in `this._response`.
         Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
         """
+        
         res = request(
-            "GET", WebTRISClient.API_URL + WebTRISClient.SitesRequest.ENDPOINT
+            method="GET", 
+            url=f"{WebTRISClient.API_URL}{SitesRequest.ENDPOINT}",
+            timeout=5,
         )
-        if not res.ok:
-            raise WebTRISClient.FetchError(res.status_code, res.reason)
+        if res.status_code >= 400:
+            err = HTTPError(f"{res.status_code} Error: {res.reason}")
+            err.status_code = res.status_code
+            err.reason = res.reason
+            raise err
         data = res.json()
         sites_response = SitesRequest.SitesResponse.from_dict(data)
         return sites_response
@@ -159,10 +164,7 @@ class ReportRequest:
         The endpoint for site requests on the API. This should not be changed.
     """
 
-    @staticmethod
-    @property
-    def ENDPOINT() -> str:
-        "/reports"  # The endpoint for requesting reports
+    ENDPOINT = "/reports"  # The endpoint for requesting reports
 
 
 class DailyReportRequest(ReportRequest):
@@ -186,16 +188,14 @@ class DailyReportRequest(ReportRequest):
 
     """
 
-    @property
-    @staticmethod
-    def ENDPOINT() -> str:
-        f"{ReportRequest.ENDPOINT}/daily"
+
+    ENDPOINT = f"{ReportRequest.ENDPOINT}/daily"
 
     _site_id: int
 
     @property
     def site_id(self) -> int:
-        self._site_id
+        return self._site_id
 
     @site_id.setter
     def site_id(self, new: int) -> None:
@@ -207,7 +207,7 @@ class DailyReportRequest(ReportRequest):
 
     @property
     def date(self) -> datetime:
-        self._date
+        return self._date
 
     @date.setter
     def date(self, new: datetime) -> None:
@@ -265,11 +265,12 @@ class DailyReportRequest(ReportRequest):
         for observation in data["Rows"]:
             try:
                 observation_list.append(
-                    FifteenMinuteObservation.from_dict(observation)
+                    FifteenMinuteObservation.from_dict(self.site_id, observation)
                 )
-            except ValueError:
+            except (ValueError, TypeError):
                 # Silently exclude any faulty observations not containing full amounts of data
                 continue
+        return observation_list
         
 class FifteenMinuteObservation:
     """
@@ -335,19 +336,17 @@ class FifteenMinuteObservation:
             raise ValueError(
                 "Cannot construct `FifteenMinuteObservation` from dict without valid timestamp"
             )
+        
         time: list[int] = [
             int(n) for n in data["Time Period Ending"].split(":")
         ]  # Split "00:11:22" time into int array of [0, 11, 22] for [hour, minute, second]
-        dt.hour = time[0]
-        dt.minute = time[1]
-        dt.second = time[2]
-
+        dt = dt.replace(hour=time[0], minute=time[1], second=time[2], microsecond=0)  # Set time of datetime to time given in "Time Period Ending"
         return cls(
             site_name=data.get("Site Name"),
             site_id=site_id,
             end_time=dt,
-            average_speed=data.get("Avg mph"),
-            vehicle_count=data.get("Total Volume"),
+            average_speed=float(data.get("Avg mph")),
+            vehicle_count=int(data.get("Total Volume")),
         )
         
     # Internal storage of properties
@@ -424,13 +423,13 @@ class FifteenMinuteObservation:
             raise ValueError(
                 "Cannot initialize FifteenMinuteObservation with no/<0 average_speed!"
             )
-        self.average_speed = average_speed
+        self._average_speed = average_speed
 
         if not isinstance(vehicle_count, int) or vehicle_count < 0:
             raise ValueError(
                 "Cannot initialize FifteenMinuteObservation with no/<0 vehicle_count!"
             )
-        vehicle_count = vehicle_count
+        self._vehicle_count = vehicle_count
 
         
         
