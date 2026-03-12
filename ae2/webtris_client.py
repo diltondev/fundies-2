@@ -285,6 +285,10 @@ class FifteenMinuteObservation:
         The site name returned in WebTRIS API.
     end_time: datetime
         A datetime.datetime object representing the ending time of the observation. Units smaller than minute should be 0.
+    date: datetime
+        A datetime.datetime object representing the date of the observation. Hours, minutes, seconds, and microseconds are 0.
+    end_time_minutes_in_day: int
+        An int representing how many minutes into the day the observation is. For example, 01:15:00 would be 75.
     average_speed: float
         A float containing the average speed in miles per hour (mph) of vehicles in the observation time.
     vehicle_count: int
@@ -307,7 +311,7 @@ class FifteenMinuteObservation:
     @classmethod
     def from_dict(
         cls, site_id: int, data: dict
-    ) -> "DailyReportRequest.FifteenMinuteObservation":
+    ) -> "FifteenMinuteObservation":
         """
         Creates a new `FifteenMinutesObservation` object using key-value dictionary in the format provided by WebTRIS API.
 
@@ -325,6 +329,8 @@ class FifteenMinuteObservation:
         ------
         ValueError
             If trying to initialize with no/empty "Time Period Ending"
+        ValueError
+            If trying to initialize with non-numeric "Avg mph" or "Total Volume"
 
         Returns
         -------
@@ -362,7 +368,7 @@ class FifteenMinuteObservation:
         return self._site_name
 
     @property
-    def site_id(self) -> str:
+    def site_id(self) -> int:
         return self._site_id
 
     @property

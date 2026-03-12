@@ -128,6 +128,36 @@ class TestReportRequest:
     
     
 
+@pytest.fixture
+def mock_fifteen_minute_observation_data():
+    return {
+        "Site Name": "M25/4876A",
+        "Report Date": "2025-03-10T00:00:00",
+        "Time Period Ending": "00:14:00",
+        "Time Interval": "0",
+        "0 - 520 cm": "136",
+        "521 - 660 cm": "11",
+        "661 - 1160 cm": "12",
+        "1160+ cm": "13",
+        "0 - 10 mph": "",
+        "11 - 15 mph": "",
+        "16 - 20 mph": "",
+        "21 - 25 mph": "",
+        "26 - 30 mph": "",
+        "31 - 35 mph": "",
+        "36 - 40 mph": "",
+        "41 - 45 mph": "",
+        "46 - 50 mph": "",
+        "51 - 55 mph": "",
+        "56 - 60 mph": "",
+        "61 - 70 mph": "",
+        "71 - 80 mph": "",
+        "80+ mph": "",
+        "Avg mph": "66",
+        "Total Volume": "172"
+    }
+    
+ 
     
 @pytest.fixture
 def mock_daily_report_response():
@@ -289,6 +319,105 @@ def mock_daily_report_invalid_json_response():
         ]
     }
     return response
+   
+@pytest.fixture
+def normal_fifteen_minute_observation():
+    return FifteenMinuteObservation(
+        site_name="M25/4876A",
+        site_id=1,
+        end_time=datetime(2025, 3, 10, 0, 14, 0),
+        average_speed=66.2,
+        vehicle_count=172
+    )
+
+class TestFifteenMinuteObservation:
+    def test_from_dict_success(self, mock_fifteen_minute_observation_data):
+        site_id = 1
+        data = mock_fifteen_minute_observation_data
+        observation = FifteenMinuteObservation.from_dict(site_id, data)
+        assert observation.site_name == "M25/4876A"
+        assert observation.site_id == site_id
+        assert observation.end_datetime == datetime(2025, 3, 10, 0, 14, 0)
+        assert observation.date == datetime(2025, 3, 10)
+        assert observation.end_time_minutes_in_day == 14
+        assert observation.average_speed == 66
+        assert observation.vehicle_count == 172
+    
+    def test_from_dict_faulty_types(self, mock_fifteen_minute_observation_data):
+        site_id = 1
+        data = mock_fifteen_minute_observation_data            
+        data["Avg mph"] = "not an int"
+        with pytest.raises(ValueError):
+            FifteenMinuteObservation.from_dict(site_id, data)
+        data["Avg mph"] = "66"
+        data["Total Volume"] = "not an int"
+        with pytest.raises(ValueError):
+            FifteenMinuteObservation.from_dict(site_id, data)
+        data["Total Volume"] = "172"
+        del data["Time Period Ending"]
+        with pytest.raises(ValueError):
+            FifteenMinuteObservation.from_dict(site_id, data)
+            
+    def test_from_dict_faulty_date(self, mock_fifteen_minute_observation_data):
+        site_id = 1
+        data = mock_fifteen_minute_observation_data            
+        data["Report Date"] = "not a date"
+        with pytest.raises(ValueError):
+            FifteenMinuteObservation.from_dict(site_id, data)
+        data["Report Date"] = "2025-03-10T00:00:00"
+        data["Time Period Ending"] = "not a time"
+        with pytest.raises(ValueError):
+            FifteenMinuteObservation.from_dict(site_id, data)
+            
+    def test_changing_attributes(self, normal_fifteen_minute_observation):
+        observation = normal_fifteen_minute_observation
+        with pytest.raises(AttributeError):
+            observation.site_name = "New Site Name"
+        with pytest.raises(AttributeError):
+            observation.site_id = 2
+        with pytest.raises(AttributeError):
+            observation.end_datetime = datetime(2025, 3, 10, 0, 29, 0)
+        with pytest.raises(AttributeError):
+            observation.average_speed = 70.5
+        with pytest.raises(AttributeError):
+            observation.vehicle_count = 200
+        assert observation.site_name == "M25/4876A"
+        assert observation.site_id == 1
+        assert observation.end_datetime == datetime(2025, 3, 10, 0, 14, 0)
+        assert observation.average_speed == 66.2
+        assert observation.vehicle_count == 172
+        
+        
+    def test_date(self, normal_fifteen_minute_observation):
+        observation = normal_fifteen_minute_observation
+        assert observation.date == datetime(2025, 3, 10)
+        assert observation.date.year == 2025
+        assert observation.date.month == 3
+        assert observation.date.day == 10
+        assert observation.date.hour == 0
+        assert observation.date.minute == 0
+        assert observation.date.second == 0
+        assert observation.date.microsecond == 0
+        observation._observation_end_datetime = datetime(2025, 3, 11, 0, 14, 0)
+        assert observation.date == datetime(2025, 3, 11)
+        assert observation.date.year == 2025
+        assert observation.date.month == 3
+        assert observation.date.day == 11
+        assert observation.date.hour == 0
+        assert observation.date.minute == 0
+        assert observation.date.second == 0
+        assert observation.date.microsecond == 0
+        
+    def test_end_time_minutes_in_day(self, normal_fifteen_minute_observation):
+        observation = normal_fifteen_minute_observation
+        assert observation.end_time_minutes_in_day == 14
+        expected_minutes = observation.end_datetime.hour * 60 + observation.end_datetime.minute
+        assert observation.end_time_minutes_in_day == expected_minutes
+        observation._observation_end_datetime = datetime(2025, 3, 10, 1, 15, 0)
+        assert observation.end_time_minutes_in_day == 75
+        
+    
+        
     
 class TestDailyReportRequest:
     
@@ -333,4 +462,3 @@ class TestDailyReportRequest:
         assert response[0].average_speed == 66
         assert response[0].vehicle_count == 172
         
-    
