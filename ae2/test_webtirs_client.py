@@ -5,6 +5,7 @@ from unittest.mock import patch, Mock
 from requests.exceptions import Timeout, ConnectionError, HTTPError
 
 from webtris_client import (
+    Site,
     WebTRISClient,
     SitesRequest,
     ReportRequest,
@@ -415,9 +416,7 @@ class TestFifteenMinuteObservation:
         assert observation.end_time_minutes_in_day == expected_minutes
         observation._observation_end_datetime = datetime(2025, 3, 10, 1, 15, 0)
         assert observation.end_time_minutes_in_day == 75
-        
     
-        
     
 class TestDailyReportRequest:
     
@@ -462,3 +461,198 @@ class TestDailyReportRequest:
         assert response[0].average_speed == 66
         assert response[0].vehicle_count == 172
         
+        
+@pytest.fixture
+@patch('webtris_client.DailyReportRequest.send')
+def normal_site(report_request_send_mock):
+    report_request_send_mock.return_value = [
+        FifteenMinuteObservation(
+            site_name="M25/4876A",
+            site_id=1,
+            end_time=datetime(2025, 3, 10, 0, 14, 0),
+            average_speed=66.2,
+            vehicle_count=172
+        ),
+        FifteenMinuteObservation(
+            site_name="M25/4876A",
+            site_id=1,
+            end_time=datetime(2025, 3, 10, 0, 29, 0),
+            average_speed=65.0,
+            vehicle_count=136
+        ),
+        FifteenMinuteObservation(
+            site_name="M25/4876A",
+            site_id=1,
+            end_time=datetime(2025, 3, 10, 0, 44, 0),
+            average_speed=64.5,
+            vehicle_count=150
+        ),
+        FifteenMinuteObservation(
+            site_name="M25/4876A",
+            site_id=1,
+            end_time=datetime(2025, 3, 10, 0, 59, 0),
+            average_speed=64.0,
+            vehicle_count=100
+        ),
+        FifteenMinuteObservation(
+            site_name="M25/4876A",
+            site_id=1,
+            end_time=datetime(2025, 3, 10, 1, 14, 0),
+            average_speed=60.0,
+            vehicle_count=100
+        )
+    ]
+    return Site(1, datetime(2025, 3, 10))
+
+@patch('webtris_client.DailyReportRequest.send')
+class TestSite:
+    
+    def test_get_set_attributes(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        site: Site = normal_site
+        assert site.site_id == 1
+        assert site.date.year == 2025
+        assert site.date.month == 3
+        assert site.date.day == 10
+        site.date =  datetime(2025, 3, 11)
+        assert site.date == datetime(2025, 3, 11)
+        
+    
+    def test_get_observations_list(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        observations = normal_site.get_observations_list()
+        assert len(observations) == 5
+        assert observations[0].site_name == "M25/4876A"
+        assert observations[0].end_datetime == datetime(2025, 3, 10, 0, 14, 0)
+        assert observations[0].end_time_minutes_in_day == 14
+        assert observations[0].average_speed == 66.2
+        assert observations[0].vehicle_count == 172
+        assert observations[1].end_time_minutes_in_day == 29
+        assert observations[2].end_time_minutes_in_day == 44
+        assert observations[3].end_time_minutes_in_day == 59
+        assert observations[4].end_time_minutes_in_day == 74
+        
+    def test_get_average_speed(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        average_speed = normal_site.get_average_speed()
+        total_weighted_speed = 66.2 * 172 + 65.0 * 136 + 64.5 * 150 + 64.0 * 100 + 60.0 * 100
+        total_count = 172 + 136 + 150 + 100 + 100
+        expected_average_speed = total_weighted_speed / total_count
+        assert average_speed == expected_average_speed
+        
+    def test_get_average_speed_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        average_speed = site.get_average_speed()
+        assert average_speed == 0.0
+        
+    def test_get_hourly_average_speed(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        hourly_average_speed = normal_site.get_hourly_average_speed(0)
+        total_weighted_speed = 66.2 * 172 + 65.0 * 136 + 64.5 * 150 + 64.0 * 100
+        total_count = 172 + 136 + 150 + 100
+        expected_hourly_average_speed = total_weighted_speed / total_count
+        assert hourly_average_speed == expected_hourly_average_speed
+        
+    def test_get_hourly_average_speed_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        hourly_average_speed = site.get_hourly_average_speed(0)
+        assert hourly_average_speed == 0.0
+        
+    def test_get_vehicle_count(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        vehicle_count = normal_site.get_vehicle_count()
+        expected_vehicle_count = 172 + 136 + 150 + 100 + 100
+        assert vehicle_count == expected_vehicle_count
+        
+    def test_get_vehicle_count_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        vehicle_count = site.get_vehicle_count()
+        assert vehicle_count == 0
+        
+    def test_get_hourly_vehicle_count(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        hourly_vehicle_count = normal_site.get_hourly_vehicle_count(0)
+        expected_hourly_vehicle_count = 172 + 136 + 150 + 100
+        assert hourly_vehicle_count == expected_hourly_vehicle_count
+        
+    def test_get_hourly_vehicle_count_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        hourly_vehicle_count = site.get_hourly_vehicle_count(0)
+        assert hourly_vehicle_count == 0
+        
+    def test_get_peak_hour(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        peak_hour = normal_site.get_peak_hour()
+        assert peak_hour == 0
+        normal_site._observations.append(
+            FifteenMinuteObservation(
+                site_name="M25/4876A",
+                site_id=1,
+                end_time=datetime(2025, 3, 10, 11, 14, 0),
+                average_speed=60.0,
+                vehicle_count=20000
+            )
+        )
+        peak_hour = normal_site.get_peak_hour()
+        assert peak_hour == 11
+        
+    def test_get_peak_hour_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        peak_hour = site.get_peak_hour()
+        assert peak_hour == 0
+        
+    def test_get_records_for_hour(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        records_for_hour = normal_site.get_records_for_hour(0)
+        assert len(records_for_hour) == 4
+        for record in records_for_hour:
+            assert record.end_datetime.hour == 0
+        records_for_hour = normal_site.get_records_for_hour(1)
+        assert len(records_for_hour) == 1
+        assert records_for_hour[0].end_datetime.hour == 1
+        
+    def test_get_records_for_hour_with_no_observations(self, mock_report_request_send):
+        mock_report_request_send.return_value = []
+        site = Site(1, datetime(2025, 3, 10))
+        records_for_hour = site.get_records_for_hour(0)
+        assert len(records_for_hour) == 0
+        
+    def test_get_records_for_hour_out_of_range(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        with pytest.raises(ValueError):
+            normal_site.get_records_for_hour(24)
+        with pytest.raises(ValueError):
+            normal_site.get_records_for_hour(-1)
+   
+    def test_site_len(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        assert len(normal_site) == 5         
+   
+    def test_site_getitems(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        assert normal_site[0].site_name == "M25/4876A"
+        assert normal_site[0].end_datetime == datetime(2025, 3, 10, 0, 14, 0)
+        assert normal_site[0].end_time_minutes_in_day == 14
+        assert normal_site[0].average_speed == 66.2
+        assert normal_site[0].vehicle_count == 172
+        
+    def test_site_getitems_out_of_range(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        with pytest.raises(IndexError):
+            normal_site[5]
+        with pytest.raises(IndexError):
+            normal_site[-6]
+        
+    def test_site_iter(self, mock_report_request_send, normal_site):
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        for observation in normal_site:
+            assert observation.site_name == "M25/4876A"
+            assert observation.end_datetime.hour == 0 or observation.end_datetime.hour == 1
+            assert observation.site_id == 1
+        
+    

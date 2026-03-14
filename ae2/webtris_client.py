@@ -457,14 +457,16 @@ class Site:
     _site_id: int
     
     @property
-    def date(self) -> datetime: self._date
+    def date(self) -> datetime: 
+        return self._date
     @date.setter
     def date(self, new: datetime):
         self._date = new
         self.update_data()
     
     @property
-    def site_id(self) -> int: self._site_id
+    def site_id(self) -> int: 
+        return self._site_id
     
     def __init__(self, site_id: int, date: datetime = datetime.now()):
         self._date = date
@@ -480,7 +482,7 @@ class Site:
         list[FifteenMinuteObservation]
             The shallow copy
         """
-        self._observations.copy()
+        return self._observations.copy()
         
     def update_data(self):
         """
@@ -492,18 +494,21 @@ class Site:
     
     def get_average_speed(self) -> float:
         """
-        Calculates the average speed over all observations in mph
+        Calculates the average speed over all observations in mph. Weighted based on total vehicle count in each observation.
 
         Returns
         -------
         float
             The average speed in mph
         """
-        return sum(o.average_speed for o in self._observations) / len(self._observations)
+        total_weighted_speed = sum(o.average_speed * o.vehicle_count for o in self._observations)
+        total_count = sum(o.vehicle_count for o in self._observations)
+        return total_weighted_speed / total_count if total_count > 0 else 0.0
     
     def get_hourly_average_speed(self, hour: int) -> float:
         """
         Calculates the average speed on datapoints where observation.end_datetime.hour == hour
+        Weighted based on total vehicle count in each observation.
 
         Parameters
         ----------
@@ -515,7 +520,9 @@ class Site:
         float
             The average speed in mph for that hour
         """
-        return sum(o.average_speed for o in self._observations if o.end_datetime.hour == hour) / len(self._observations)
+        total_weighted_speed = sum(o.average_speed * o.vehicle_count for o in self._observations if o.end_datetime.hour == hour)
+        total_count = sum(o.vehicle_count for o in self._observations if o.end_datetime.hour == hour)
+        return total_weighted_speed / total_count if total_count > 0 else 0.0
     
     def get_vehicle_count(self) -> int:
         """
@@ -547,11 +554,12 @@ class Site:
     def get_peak_hour(self) -> int:
         """
         Gets hour (0-23) where the maximum number of cars were observed
+        Returns 0 if there are no observations
 
         Returns
         -------
         int
-            The hour (0-23) with the highest amount of 
+            The hour (0-23) with the highest amount of vehicles
         """
         hourly_counts: dict[int: int] = dict()
         for o in self._observations:
@@ -559,7 +567,7 @@ class Site:
             if hour not in hourly_counts:
                 hourly_counts[hour] = 0
             hourly_counts[hour] += o.vehicle_count
-        return max(hourly_counts.items(), key=lambda x: x[1])[0] # Return hour with most vehicles
+        return max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else 0 # Return hour with most vehicles
     
     def get_records_for_hour(self, hour: int) -> list[FifteenMinuteObservation]:
         """
@@ -569,12 +577,19 @@ class Site:
         ----------
         hour : int
             24 hour (0-23) time to search for 
+            
+        Raises
+        ------
+        ValueError
+            If hour is not between 0 and 23
 
         Returns
         -------
         list[FifteenMinuteObservation]
             All records in that hour
         """
+        if hour < 0 or hour > 23:
+            raise ValueError("Hour must be between 0 and 23 inclusive")
         return [o for o in self._observations if o.end_datetime.hour == hour]
     
     def __getitem__(self, key: int | slice) -> FifteenMinuteObservation | list[FifteenMinuteObservation]:
