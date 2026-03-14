@@ -3,17 +3,11 @@
 from dataclasses import dataclass
 from datetime import datetime
 from collections.abc import Iterator
-from requests import request, Timeout, ConnectionError, HTTPError
+from requests import request, HTTPError
 
 
 class WebTRISClient:
     API_URL = "https://webtris.nationalhighways.co.uk/api/v1.0"
-
-    # class FetchError(Exception):
-    #     def __init__(self, status_code: int, status_message: str = ""):
-    #         super().__init__(
-    #             f"Recieved a non-okay status when fetching!\nError code: {status_code}\nDetails: {status_message}"
-    #         )
 
 
 class SitesRequest:
@@ -31,7 +25,7 @@ class SitesRequest:
     send() -> `SitesRequest.SitesResponse`
         Sends a request to the API and returns the response. Throws errors if `not status.ok`. Otherwise silently excludes deformed data.
     """
-    
+
     ENDPOINT = "/sites"  # The endpoint for requesting sites
 
     @dataclass(frozen=True)
@@ -111,7 +105,7 @@ class SitesRequest:
                 if site["Status"] == "":
                     print(f"Excluding site with empty status: {site}")
                     continue
-                    
+
                 sites_response.sites.append(
                     cls._Site(
                         id=int(site["Id"]),
@@ -129,9 +123,9 @@ class SitesRequest:
         This method sends a request to the sites endpoint. It stores the response in `this._response`.
         Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
         """
-        
+
         res = request(
-            method="GET", 
+            method="GET",
             url=f"{WebTRISClient.API_URL}{SitesRequest.ENDPOINT}",
             timeout=5,
         )
@@ -188,7 +182,6 @@ class DailyReportRequest(ReportRequest):
 
     """
 
-
     ENDPOINT = f"{ReportRequest.ENDPOINT}/daily"
 
     _site_id: int
@@ -216,7 +209,7 @@ class DailyReportRequest(ReportRequest):
         self._date = new.replace(
             hour=0, minute=0, second=0, microsecond=0
         )  # Ignore time and set to midnight of date
-        
+
     def __init__(
         self,
         site_id: int,
@@ -271,7 +264,8 @@ class DailyReportRequest(ReportRequest):
                 # Silently exclude any faulty observations not containing full amounts of data
                 continue
         return observation_list
-        
+
+
 class FifteenMinuteObservation:
     """
     A class to represent a fifteen minute measurement of traffic data from the WebTRIS API.
@@ -309,9 +303,7 @@ class FifteenMinuteObservation:
     """
 
     @classmethod
-    def from_dict(
-        cls, site_id: int, data: dict
-    ) -> "FifteenMinuteObservation":
+    def from_dict(cls, site_id: int, data: dict) -> "FifteenMinuteObservation":
         """
         Creates a new `FifteenMinutesObservation` object using key-value dictionary in the format provided by WebTRIS API.
 
@@ -342,11 +334,13 @@ class FifteenMinuteObservation:
             raise ValueError(
                 "Cannot construct `FifteenMinuteObservation` from dict without valid timestamp"
             )
-        
+
         time: list[int] = [
             int(n) for n in data["Time Period Ending"].split(":")
         ]  # Split "00:11:22" time into int array of [0, 11, 22] for [hour, minute, second]
-        dt = dt.replace(hour=time[0], minute=time[1], second=time[2], microsecond=0)  # Set time of datetime to time given in "Time Period Ending"
+        dt = dt.replace(
+            hour=time[0], minute=time[1], second=time[2], microsecond=0
+        )  # Set time of datetime to time given in "Time Period Ending"
         return cls(
             site_name=data.get("Site Name"),
             site_id=site_id,
@@ -354,7 +348,7 @@ class FifteenMinuteObservation:
             average_speed=float(data.get("Avg mph")),
             vehicle_count=int(data.get("Total Volume")),
         )
-        
+
     # Internal storage of properties
     _site_name: str
     _site_id: int
@@ -398,7 +392,6 @@ class FifteenMinuteObservation:
     def vehicle_count(self) -> int:
         return self._vehicle_count
 
-        
     def __init__(
         self,
         site_name: str,
@@ -437,12 +430,11 @@ class FifteenMinuteObservation:
             )
         self._vehicle_count = vehicle_count
 
-        
-        
+
 class Site:
     """
     A class to represent one traffic camera and corresponding data in WebTRIS.
-    Objects can be indexed into to reach FifteenMinuteObeservation elements. A shallow copy can be obtained instead via `.get_observations_list()` 
+    Objects can be indexed into to reach FifteenMinuteObeservation elements. A shallow copy can be obtained instead via `.get_observations_list()`
 
     Attributes
     ----------
@@ -451,28 +443,29 @@ class Site:
     site_id: int, readonly
         The site identifier which this object corresponds to.
     """
-    
+
     _observations: list[FifteenMinuteObservation]
     _date: datetime
     _site_id: int
-    
+
     @property
-    def date(self) -> datetime: 
+    def date(self) -> datetime:
         return self._date
+
     @date.setter
     def date(self, new: datetime):
         self._date = new
         self.update_data()
-    
+
     @property
-    def site_id(self) -> int: 
+    def site_id(self) -> int:
         return self._site_id
-    
+
     def __init__(self, site_id: int, date: datetime = datetime.now()):
         self._date = date
         self._site_id = site_id
         self.update_data()
-        
+
     def get_observations_list(self) -> list[FifteenMinuteObservation]:
         """
         Returns a shallow copy of the observations related to this site
@@ -483,15 +476,15 @@ class Site:
             The shallow copy
         """
         return self._observations.copy()
-        
+
     def update_data(self):
         """
-         Makes another call to the API to update the observation data. Called on `__init__` and `@date.setter`
+        Makes another call to the API to update the observation data. Called on `__init__` and `@date.setter`
         """
         requestor = DailyReportRequest(site_id=self.site_id, date=self.date)
         self._observations = requestor.send()
         self._observations.sort(key=lambda o: o.end_time_minutes_in_day)
-    
+
     def get_average_speed(self) -> float:
         """
         Calculates the average speed over all observations in mph. Weighted based on total vehicle count in each observation.
@@ -501,10 +494,12 @@ class Site:
         float
             The average speed in mph
         """
-        total_weighted_speed = sum(o.average_speed * o.vehicle_count for o in self._observations)
+        total_weighted_speed = sum(
+            o.average_speed * o.vehicle_count for o in self._observations
+        )
         total_count = sum(o.vehicle_count for o in self._observations)
         return total_weighted_speed / total_count if total_count > 0 else 0.0
-    
+
     def get_hourly_average_speed(self, hour: int) -> float:
         """
         Calculates the average speed on datapoints where observation.end_datetime.hour == hour
@@ -520,10 +515,16 @@ class Site:
         float
             The average speed in mph for that hour
         """
-        total_weighted_speed = sum(o.average_speed * o.vehicle_count for o in self._observations if o.end_datetime.hour == hour)
-        total_count = sum(o.vehicle_count for o in self._observations if o.end_datetime.hour == hour)
+        total_weighted_speed = sum(
+            o.average_speed * o.vehicle_count
+            for o in self._observations
+            if o.end_datetime.hour == hour
+        )
+        total_count = sum(
+            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
+        )
         return total_weighted_speed / total_count if total_count > 0 else 0.0
-    
+
     def get_vehicle_count(self) -> int:
         """
         Calculates total number of vehicles through all observations
@@ -533,8 +534,8 @@ class Site:
         int
             The total vehicle count over all observations
         """
-        return sum(o.vehicle_count for o in self._observations) 
-    
+        return sum(o.vehicle_count for o in self._observations)
+
     def get_hourly_vehicle_count(self, hour: int) -> int:
         """
         Calculates total number of vehicles through all observations where observation.end_datetime.hour == hour
@@ -542,15 +543,17 @@ class Site:
         Parameters
         ----------
         hour : int
-            24 hour (0-23) time to search for 
+            24 hour (0-23) time to search for
 
         Returns
         -------
         int
             The total vehicle count over that hour
         """
-        return sum(o.vehicle_count for o in self._observations if o.end_datetime.hour == hour)
-    
+        return sum(
+            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
+        )
+
     def get_peak_hour(self) -> int:
         """
         Gets hour (0-23) where the maximum number of cars were observed
@@ -561,14 +564,16 @@ class Site:
         int
             The hour (0-23) with the highest amount of vehicles
         """
-        hourly_counts: dict[int: int] = dict()
+        hourly_counts: dict[int:int] = dict()
         for o in self._observations:
             hour = o.end_datetime.hour
             if hour not in hourly_counts:
                 hourly_counts[hour] = 0
             hourly_counts[hour] += o.vehicle_count
-        return max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else 0 # Return hour with most vehicles
-    
+        return (
+            max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else 0
+        )  # Return hour with most vehicles
+
     def get_records_for_hour(self, hour: int) -> list[FifteenMinuteObservation]:
         """
         Gets all records where observation.end_datetime.hour == hour
@@ -576,8 +581,8 @@ class Site:
         Parameters
         ----------
         hour : int
-            24 hour (0-23) time to search for 
-            
+            24 hour (0-23) time to search for
+
         Raises
         ------
         ValueError
@@ -591,13 +596,15 @@ class Site:
         if hour < 0 or hour > 23:
             raise ValueError("Hour must be between 0 and 23 inclusive")
         return [o for o in self._observations if o.end_datetime.hour == hour]
-    
-    def __getitem__(self, key: int | slice) -> FifteenMinuteObservation | list[FifteenMinuteObservation]:
+
+    def __getitem__(
+        self, key: int | slice
+    ) -> FifteenMinuteObservation | list[FifteenMinuteObservation]:
         return self._observations[key]
 
     def __len__(self):
         return len(self._observations)
-    
+
     def __iter__(self) -> Iterator[FifteenMinuteObservation]:
         for o in self._observations:
             yield o
