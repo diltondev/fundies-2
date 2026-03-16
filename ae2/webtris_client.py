@@ -89,20 +89,17 @@ class SitesRequest:
                     print(f"Excluding site with missing field(s): {site}")
                     continue  # Exclude API response sites missing a field
                 try:
-                    _ = int(site["Id"])
+                    _ = int(site['Id'])
                 except ValueError:
                     print(f"Excluding site with non-numeric ID `{site['Id']}`")
                     continue  # Exclude non-numeric or missing ID's
-                if site["Name"] == "":
-                    print(f"Excluding site with empty name: {site}")
-                    continue
-                if site["Description"] == "":
+                if site['Description'] == "":
                     print(f"Excluding site with empty description: {site}")
                     continue
-                if site["Longitude"] == 0.0 or site["Latitude"] == 0.0:
+                if site['Longitude'] == 0.0 or site['Latitude'] == 0.0:
                     print(f"Excluding site with invalid longitude/latitude: {site}")
                     continue  # Latitude and Longitude are 14-digit precise: won't be at exactly 0.0
-                if site["Status"] == "":
+                if site['Status'] == "":
                     print(f"Excluding site with empty status: {site}")
                     continue
 
@@ -225,7 +222,7 @@ class DailyReportRequest(ReportRequest):
         Returns
         -------
         list[FifteenMinuteObservation]
-            A list of observations of traffic flow for the day given when initializing the class. site_name, site_id, observation_end_datetime, average_speed, and vehicle_count
+            A list of observations of traffic flow for the day given when initializing the class. site_id, observation_end_datetime, average_speed, and vehicle_count
             can be relied upon in those observations as they will otherwise be excluded.
 
         Raises
@@ -241,14 +238,15 @@ class DailyReportRequest(ReportRequest):
             url=WebTRISClient.API_URL + DailyReportRequest.ENDPOINT,
             params={
                 "sites": self.site_id,
-                "start_date": self.date.strftime("%Y%m%d"),
-                "end_date": self.date.strftime("%Y%m%d"),
+                "start_date": self.date.strftime("%d%m%Y"),
+                "end_date": self.date.strftime("%d%m%Y"),
                 "page": 1,
                 "page_size": 500,
             },
         )
-        if not res.ok:
-            raise WebTRISClient.FetchError(res.status_code, res.reason)
+        res.raise_for_status()
+        if res.status_code == 204:
+            return []  # No content, return empty list
         data = res.json()
         if "Rows" not in data:
             raise ValueError(
@@ -341,6 +339,7 @@ class FifteenMinuteObservation:
         dt = dt.replace(
             hour=time[0], minute=time[1], second=time[2], microsecond=0
         )  # Set time of datetime to time given in "Time Period Ending"
+        # print(f"making w data: {data}")
         return cls(
             site_name=data.get("Site Name"),
             site_id=site_id,
@@ -429,6 +428,54 @@ class FifteenMinuteObservation:
                 "Cannot initialize FifteenMinuteObservation with no/<0 vehicle_count!"
             )
         self._vehicle_count = vehicle_count
+        
+    def __lt__(self, other: "FifteenMinuteObservation") -> bool:
+        """
+        Less-than operator for FifteenMinuteObservation. Compares based on end_datetime.
+
+        Parameters
+        ----------
+        other : FifteenMinuteObservation
+            The other observation to compare to
+            
+        Returns
+        -------
+        bool
+            True if this observation's end_datetime is less than the other observation's end_datetime, False otherwise
+        """
+        return self.end_datetime < other.end_datetime
+    
+    def __gt__(self, other: "FifteenMinuteObservation") -> bool:
+        """
+        Greater-than operator for FifteenMinuteObservation. Compares based on end_datetime.
+
+        Parameters
+        ----------
+        other : FifteenMinuteObservation
+            The other observation to compare to
+            
+        Returns
+        bool
+            True if this observation's end_datetime is greater than the other observation's end_datetime, False otherwise
+        """
+        return self.end_datetime > other.end_datetime
+    
+    def __eq__(self, other: object) -> bool:
+        """
+        Equality operator for FifteenMinuteObservation. Compares based on end_datetime.
+
+        Parameters
+        ----------
+        other : object
+            The other observation to compare to
+        
+        Returns
+        -------
+        bool
+            True if this observation's end_datetime is equal to the other observation's end_datetime, False otherwise
+        """
+        return self.end_datetime == other.end_datetime
+        
 
 
 class Site:
@@ -442,12 +489,15 @@ class Site:
         The date on which the observations are recorded. May have errounious hours, minutes, and seconds. Calls `.update_data()` on change.
     site_id: int, readonly
         The site identifier which this object corresponds to.
+    name: str, readonly
+        The name of the site this object corresponds to. Obtained from the API when `.update_data()` is called.
     """
 
     _observations: list[FifteenMinuteObservation]
     _date: datetime
     _site_id: int
-
+    _name: str
+    
     @property
     def date(self) -> datetime:
         return self._date
@@ -460,6 +510,10 @@ class Site:
     @property
     def site_id(self) -> int:
         return self._site_id
+    
+    @property
+    def name(self) -> str:
+        return self._name
 
     def __init__(self, site_id: int, date: datetime = datetime.now()):
         self._date = date
@@ -483,7 +537,8 @@ class Site:
         """
         requestor = DailyReportRequest(site_id=self.site_id, date=self.date)
         self._observations = requestor.send()
-        self._observations.sort(key=lambda o: o.end_time_minutes_in_day)
+        self._observations.sort()
+        self._name = self._observations[0].site_name if len(self._observations) > 0 else "Unknown Site"
 
     def get_average_speed(self) -> float:
         """

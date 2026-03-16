@@ -135,7 +135,7 @@ class TestSitesRequest:
     def test_from_dict_faulty_data(self, mock_sites_invalid_json_responses):
         data = mock_sites_invalid_json_responses.json()
         response = SitesRequest.SitesResponse.from_dict(data)
-        assert len(response.sites) == 1
+        assert len(response.sites) == 2
         assert response.sites[0].id == 10
 
     @patch("requests.Session.send")
@@ -171,7 +171,7 @@ class TestSitesRequest:
         mock_send.return_value = mock_sites_invalid_json_responses
         request = SitesRequest()
         response = request.send()
-        assert len(response.sites) == 1
+        assert len(response.sites) == 2
         assert response.sites[0].id == 10
 
     @patch("requests.Session.send")
