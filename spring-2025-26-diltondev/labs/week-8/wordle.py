@@ -27,7 +27,9 @@ def display_feedback(guess, secret):
 
 def play(bst):
     secret = pick_secret(bst)
-    print(f"\nI have chosen a secret five letter word ({secret}). You have 6 guesses.\n")
+    print(
+        f"\nI have chosen a secret five letter word ({secret}). You have 6 guesses.\n"
+    )
 
     min_guess = None
     max_guess = None
@@ -62,6 +64,13 @@ def play(bst):
     # and max_guess. Print the result in the following format:
     #   "Your guesses ranged from {min_guess} to {max_guess}: X words apart."
     # If min_guess == max_guess, print "You got it in one guess!" instead.
+    if min_guess == max_guess:
+        print("You got it in one guess!")
+    else:
+        word_range = bst.range_query(min_guess, max_guess)
+        print(
+            f"Your guesses ranged from {min_guess} to {max_guess}: {len(word_range)} words apart."
+        )
 
 
 def pick_secret(bst):

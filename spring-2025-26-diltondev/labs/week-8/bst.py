@@ -79,16 +79,16 @@ class BinarySearchTree:
 
     def to_list(self):
         """Return a list of all values in the BST in alphabetical order."""
-        result = []
+        result = list()
         self._to_list(self.root, result)
         return result
 
     def _to_list(self, node, result):
-        # TODO: implement this method
-        # Hint: look at _traverse above,  your solution has almost exactly
-        # the same structure. Instead of printing each value, append it
-        # to the result list.
-        pass
+        if not node:
+            return []
+        self._to_list(node.left_child, result)
+        result.append(node.value)
+        self._to_list(node.right_child, result)
 
     def range_query(self, lower, upper):
         """
@@ -108,14 +108,11 @@ class BinarySearchTree:
         return results
 
     def _range_query(self, node, lower, upper, results):
-        # TODO: implement this method
-        # Hint: your solution will look very similar to _to_list.
-        # The difference is that you use the BST ordering invariant
-        # to decide which subtrees are worth visiting:
-        #   - If the current node's value is less than lower, there is
-        #     no point recursing left, everything there is even smaller
-        #     and cannot be in range.
-        #   - If the current node's value is greater than upper, there is
-        #     no point recursing right, everything there is even larger
-        #     and cannot be in range.
-        pass
+        if not node:
+            return
+        if node.value >= lower:
+            self._range_query(node.left_child, lower, upper, results)
+        if node.value >= lower and node.value <= upper:
+            results.append(node.value)
+        if node.value <= upper:
+            self._range_query(node.right_child, lower, upper, results)
