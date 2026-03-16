@@ -69,6 +69,12 @@ class SitesRequest:
             longitude: float
             latitude: float
             status: str
+            
+            def __repr__(self) -> str:
+                return f"Site(id={self.id}, name='{self.name}', description='{self.description}', longitude={self.longitude}, latitude={self.latitude}, status='{self.status}')"
+            
+            def __str__(self) -> str:
+                return f"Site {self.id}: {self.name} ({self.description}) at ({self.latitude}, {self.longitude}), status: {self.status}"
 
         row_count: int
         sites: list[_Site]
@@ -117,7 +123,7 @@ class SitesRequest:
 
     def send(this) -> SitesResponse:
         """
-        This method sends a request to the sites endpoint. It stores the response in `this._response`.
+        This method sends a request to the sites endpoint. It returns the response.
         Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
         """
 
@@ -139,6 +145,13 @@ class SitesRequest:
         """
         Returns a new SitesRequest object
         """
+        pass
+    
+    def __repr__(self):
+        return f"SitesRequest()"
+    
+    def __str__(self):
+        return f"SitesRequest()"
 
 
 class ReportRequest:
@@ -262,6 +275,12 @@ class DailyReportRequest(ReportRequest):
                 # Silently exclude any faulty observations not containing full amounts of data
                 continue
         return observation_list
+    
+    def __repr__(self):
+        return f"DailyReportRequest(site_id={self.site_id}, date={self.date.strftime('%Y-%m-%d')})"
+    
+    def __str__(self):
+        return f"DailyReportRequest for site {self.site_id} on {self.date.strftime('%Y-%m-%d')}"
 
 
 class FifteenMinuteObservation:
@@ -475,6 +494,12 @@ class FifteenMinuteObservation:
             True if this observation's end_datetime is equal to the other observation's end_datetime, False otherwise
         """
         return self.end_datetime == other.end_datetime
+    
+    def __repr__(self) -> str:
+        return f"FifteenMinuteObservation(site_name='{self.site_name}', site_id={self.site_id}, end_time='{self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}', average_speed={self.average_speed}, vehicle_count={self.vehicle_count})"
+    
+    def __str__(self) -> str:
+        return f"Observation at site {self.site_name} (ID {self.site_id}) on {self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}: average speed {self.average_speed} mph, vehicle count {self.vehicle_count}"
         
 
 
@@ -663,3 +688,9 @@ class Site:
     def __iter__(self) -> Iterator[FifteenMinuteObservation]:
         for o in self._observations:
             yield o
+            
+    def __repr__(self) -> str:
+        return f"Site(site_id={self.site_id}, name='{self.name}', date='{self.date.strftime('%Y-%m-%d')}', observations={self._observations})"
+    
+    def __str__(self) -> str:
+        return f"Site {self.site_id} ({self.name}) on {self.date.strftime('%Y-%m-%d')} with {len(self._observations)} observations"
