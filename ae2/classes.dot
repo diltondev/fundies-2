@@ -2,46 +2,13 @@ digraph "reports" {
 rankdir=BT
 charset="utf-8"
 splines="ortho"
-"webtris_client.DailyReportRequest" [color="black", fontcolor="black", label=<{DailyReportRequest|<U>ENDPOINT</U> : str<br ALIGN="LEFT"/>date : datetime<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>|send(): 'Site'<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
-"webtris_client.FifteenMinuteObservation" [color="black", fontcolor="black", label=<{FifteenMinuteObservation|average_speed : float<br ALIGN="LEFT"/>date : datetime<br ALIGN="LEFT"/>end_datetime : datetime<br ALIGN="LEFT"/>end_time_minutes_in_day : int<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>site_name : str<br ALIGN="LEFT"/>vehicle_count : int<br ALIGN="LEFT"/>|<U>from_dict(site_id: int, data: dict): 'FifteenMinuteObservation'</U><br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_client.DailyReportRequest" [color="black", fontcolor="black", label=<{DailyReportRequest|<U>ENDPOINT</U> : str<br ALIGN="LEFT"/>date : datetime<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>|send(): list["TrafficObservation"]<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_client.TrafficObservation" [color="black", fontcolor="black", label=<{&lt;&lt;readonly&gt;&gt;<br/>TrafficObservation|average_speed : float<br ALIGN="LEFT"/>date : datetime<br ALIGN="LEFT"/>end_datetime : datetime<br ALIGN="LEFT"/>end_time_minutes_in_day : int<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>site_name : str<br ALIGN="LEFT"/>vehicle_count : int<br ALIGN="LEFT"/>|<U>from_dict(site_id: int, data: dict): 'TrafficObservation'</U><br ALIGN="LEFT"/>}>, shape="record", style="solid"];
 "webtris_client.ReportRequest" [color="black", fontcolor="black", label=<{&lt;&lt;utility&gt;&gt;<br/>ReportRequest|<U>ENDPOINT</U> : str<br ALIGN="LEFT"/>|}>, shape="record", style="solid"];
-"webtris_client.Site" [color="black", fontcolor="black", label=<{Site|date : datetime<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>|get_average_speed(): float<br ALIGN="LEFT"/>get_hourly_average_speed(hour: int): float<br ALIGN="LEFT"/>get_hourly_vehicle_count(hour: int): int<br ALIGN="LEFT"/>get_observations_list(): list[FifteenMinuteObservation]<br ALIGN="LEFT"/>get_peak_hour(): int<br ALIGN="LEFT"/>get_records_for_hour(hour: int): list[FifteenMinuteObservation]<br ALIGN="LEFT"/>get_vehicle_count(): int<br ALIGN="LEFT"/>update_data()<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
-{rank=same; "webtris_client.DailyReportRequest"; "webtris_client.FifteenMinuteObservation"}
+"webtris_client.Site" [color="black", fontcolor="black", label=<{Site|date : datetime<br ALIGN="LEFT"/>site_id : int<br ALIGN="LEFT"/>|get_average_speed(): float<br ALIGN="LEFT"/>get_hourly_average_speed(hour: int): float<br ALIGN="LEFT"/>get_hourly_vehicle_count(hour: int): int<br ALIGN="LEFT"/>get_observations_list(): list["TrafficObservation"]<br ALIGN="LEFT"/>get_peak_hour(): int<br ALIGN="LEFT"/>get_records_for_hour(hour: int): list["TrafficObservation"]<br ALIGN="LEFT"/>get_vehicle_count(): int<br ALIGN="LEFT"/>update_data()<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+{rank=same; "webtris_client.DailyReportRequest"; "webtris_client.TrafficObservation"}
 "webtris_client.DailyReportRequest" -> "webtris_client.ReportRequest" [arrowhead="empty", arrowtail="none"];
-"webtris_client.FifteenMinuteObservation" -> "webtris_client.Site" [arrowhead="odiamond"]
-"webtris_client.DailyReportRequest" -> "webtris_client.FifteenMinuteObservation" [arrowhead="none", arrowtail="none", dir="both"]
-}
-
-
-digraph "sites" {
-    rankdir=TB
-    charset="utf-8"
-    splines="ortho"
-    subgraph cluster_SitesRequest {
-        label="SitesRequest"
-        color="black"
-        fontcolor="black"
-        style="solid"
-        "webtris_client.SitesRequest" [color="black", fontcolor="black",label=<{<U>ENDPOINT</U> : str<br ALIGN="LEFT"/>|send(): SitesResponse<br ALIGN="LEFT"/>}>,shape="record", style="solid"]
-        subgraph cluster_SitesResponse {
-            label="SitesResponse"
-            color="black"
-            fontcolor="black"
-            style="solid"
-            "webtris_client.SitesRequest.SitesResponse" [color="black", fontcolor="black",label=<{row_count : int<br ALIGN="LEFT"/>sites : list[_Site]<br ALIGN="LEFT"/>|<U>from_dict(data: dict): SitesResponse</U><br ALIGN="LEFT"/>}>,shape="record", style="solid"]
-            "webtris_client.SitesRequest.SitesResponse._Site" [color="black", fontcolor="black",label=<{_Site | description : str<br ALIGN="LEFT"/>id : int<br ALIGN="LEFT"/>latitude : float<br ALIGN="LEFT"/>longitude : float<br ALIGN="LEFT"/>name : str<br ALIGN="LEFT"/>status : str<br ALIGN="LEFT"/>|}>,shape="record", style="solid"]
-        }
-    }
-
-    "webtris_client.SitesRequest.SitesResponse._Site" -> "webtris_client.SitesRequest.SitesResponse" [
-        arrowhead="diamond", arrowtail="none"
-    ]
-}
-
-
-digraph "client" {
-rankdir=BT
-charset="utf-8"
-splines="ortho"
-    "webtris_client.WebTRISClient" [color="black", fontcolor="black", label=<{&lt;&lt;utility&gt;&gt;<br/>WebTRISClient|<U>API_URL</U> : str<br ALIGN="LEFT"/>|}>, shape="record", style="solid"];
+"webtris_client.TrafficObservation" -> "webtris_client.Site" [arrowhead="odiamond"]
+"webtris_client.DailyReportRequest" -> "webtris_client.TrafficObservation" [arrowhead="none", arrowtail="none", dir="both"]
+"webtris_client.DailyReportRequest" -> "webtris_client.Site" [arrowhead="odiamond"]
 }

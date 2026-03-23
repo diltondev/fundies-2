@@ -1,5 +1,7 @@
 """All tests for the application"""
 
+import random
+
 import pytest
 from datetime import datetime
 from unittest.mock import patch, Mock
@@ -7,11 +9,9 @@ from requests.exceptions import Timeout, ConnectionError, HTTPError
 
 from webtris_client import (
     Site,
-    WebTRISClient,
-    SitesRequest,
     ReportRequest,
     DailyReportRequest,
-    FifteenMinuteObservation,
+    TrafficObservation,
 )
 
 
@@ -107,92 +107,6 @@ def mock_sites_invalid_json_responses():
         ],
     }
     return response
-
-
-class TestWebTRISClient:
-    def test_endpoint_assert(self):
-        assert (
-            WebTRISClient.API_URL == "https://webtris.nationalhighways.co.uk/api/v1.0"
-        )
-
-
-class TestSitesRequest:
-    def test_static(self):
-        assert SitesRequest.ENDPOINT == "/sites"
-
-    def test_from_dict(self, mock_sites_success_response):
-        data = mock_sites_success_response.json()
-        response = SitesRequest.SitesResponse.from_dict(data)
-        assert len(response.sites) == 3
-        assert response.sites[0].id == 10
-        assert response.sites[0].name == "Site 1"
-        assert response.sites[0].description == "A site"
-        assert response.sites[0].longitude == 1.0
-        assert response.sites[0].latitude == 1.0
-        assert response.sites[0].status == "active"
-        assert response.sites[2].id == 30
-
-    def test_from_dict_faulty_data(self, mock_sites_invalid_json_responses):
-        data = mock_sites_invalid_json_responses.json()
-        response = SitesRequest.SitesResponse.from_dict(data)
-        assert len(response.sites) == 2
-        assert response.sites[0].id == 10
-
-    @patch("requests.Session.send")
-    def test_success(self, mock_send, mock_sites_success_response):
-        mock_send.return_value = mock_sites_success_response
-        request = SitesRequest()
-        response = request.send()
-        assert len(response.sites) == 3
-        assert response.sites[0].id == 10
-        assert response.sites[0].name == "Site 1"
-        assert response.sites[0].description == "A site"
-        assert response.sites[0].longitude == 1.0
-        assert response.sites[0].latitude == 1.0
-        assert response.sites[0].status == "active"
-        assert response.sites[2].id == 30
-
-    @patch("requests.Session.send")
-    def test_timeout(self, mock_send):
-        mock_send.side_effect = Timeout("Request timed out")
-        request = SitesRequest()
-        with pytest.raises(Timeout):
-            request.send()
-
-    @patch("requests.Session.send")
-    def test_connection_error(self, mock_send):
-        mock_send.side_effect = ConnectionError("Connection error occurred")
-        request = SitesRequest()
-        with pytest.raises(ConnectionError):
-            request.send()
-
-    @patch("requests.Session.send")
-    def test_invalid_json(self, mock_send, mock_sites_invalid_json_responses):
-        mock_send.return_value = mock_sites_invalid_json_responses
-        request = SitesRequest()
-        response = request.send()
-        assert len(response.sites) == 2
-        assert response.sites[0].id == 10
-
-    @patch("requests.Session.send")
-    def test_500_error(self, mock_send):
-        mock_response = Mock(status_code=500, reason="Internal Server Error")
-        mock_send.return_value = mock_response
-        request = SitesRequest()
-        with pytest.raises(HTTPError) as exc_info:
-            request.send()
-        assert exc_info.value.status_code == 500
-        assert exc_info.value.reason == "Internal Server Error"
-
-    @patch("requests.Session.send")
-    def test_404_error(self, mock_send):
-        mock_response = Mock(status_code=404, reason="Not Found")
-        mock_send.return_value = mock_response
-        request = SitesRequest()
-        with pytest.raises(HTTPError) as exc_info:
-            request.send()
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.reason == "Not Found"
 
 
 class TestReportRequest:
@@ -394,7 +308,7 @@ def mock_daily_report_invalid_json_response():
 
 @pytest.fixture
 def normal_fifteen_minute_observation():
-    return FifteenMinuteObservation(
+    return TrafficObservation(
         site_name="M25/4876A",
         site_id=1,
         end_time=datetime(2025, 3, 10, 0, 14, 0),
@@ -407,7 +321,7 @@ class TestFifteenMinuteObservation:
     def test_from_dict_success(self, mock_fifteen_minute_observation_data):
         site_id = 1
         data = mock_fifteen_minute_observation_data
-        observation = FifteenMinuteObservation.from_dict(site_id, data)
+        observation = TrafficObservation.from_dict(site_id, data)
         assert observation.site_name == "M25/4876A"
         assert observation.site_id == site_id
         assert observation.end_datetime == datetime(2025, 3, 10, 0, 14, 0)
@@ -421,26 +335,26 @@ class TestFifteenMinuteObservation:
         data = mock_fifteen_minute_observation_data
         data["Avg mph"] = "not an int"
         with pytest.raises(ValueError):
-            FifteenMinuteObservation.from_dict(site_id, data)
+            TrafficObservation.from_dict(site_id, data)
         data["Avg mph"] = "66"
         data["Total Volume"] = "not an int"
         with pytest.raises(ValueError):
-            FifteenMinuteObservation.from_dict(site_id, data)
+            TrafficObservation.from_dict(site_id, data)
         data["Total Volume"] = "172"
         del data["Time Period Ending"]
         with pytest.raises(ValueError):
-            FifteenMinuteObservation.from_dict(site_id, data)
+            TrafficObservation.from_dict(site_id, data)
 
     def test_from_dict_faulty_date(self, mock_fifteen_minute_observation_data):
         site_id = 1
         data = mock_fifteen_minute_observation_data
         data["Report Date"] = "not a date"
         with pytest.raises(ValueError):
-            FifteenMinuteObservation.from_dict(site_id, data)
+            TrafficObservation.from_dict(site_id, data)
         data["Report Date"] = "2025-03-10T00:00:00"
         data["Time Period Ending"] = "not a time"
         with pytest.raises(ValueError):
-            FifteenMinuteObservation.from_dict(site_id, data)
+            TrafficObservation.from_dict(site_id, data)
 
     def test_changing_attributes(self, normal_fifteen_minute_observation):
         observation = normal_fifteen_minute_observation
@@ -540,35 +454,35 @@ class TestDailyReportRequest:
 @patch("webtris_client.DailyReportRequest.send")
 def normal_site(report_request_send_mock):
     report_request_send_mock.return_value = [
-        FifteenMinuteObservation(
+        TrafficObservation(
             site_name="M25/4876A",
             site_id=1,
             end_time=datetime(2025, 3, 10, 0, 14, 0),
             average_speed=66.2,
             vehicle_count=172,
         ),
-        FifteenMinuteObservation(
+        TrafficObservation(
             site_name="M25/4876A",
             site_id=1,
             end_time=datetime(2025, 3, 10, 0, 29, 0),
             average_speed=65.0,
             vehicle_count=136,
         ),
-        FifteenMinuteObservation(
+        TrafficObservation(
             site_name="M25/4876A",
             site_id=1,
             end_time=datetime(2025, 3, 10, 0, 44, 0),
             average_speed=64.5,
             vehicle_count=150,
         ),
-        FifteenMinuteObservation(
+        TrafficObservation(
             site_name="M25/4876A",
             site_id=1,
             end_time=datetime(2025, 3, 10, 0, 59, 0),
             average_speed=64.0,
             vehicle_count=100,
         ),
-        FifteenMinuteObservation(
+        TrafficObservation(
             site_name="M25/4876A",
             site_id=1,
             end_time=datetime(2025, 3, 10, 1, 14, 0),
@@ -664,7 +578,7 @@ class TestSite:
         peak_hour = normal_site.get_peak_hour()
         assert peak_hour == 0
         normal_site._observations.append(
-            FifteenMinuteObservation(
+            TrafficObservation(
                 site_name="M25/4876A",
                 site_id=1,
                 end_time=datetime(2025, 3, 10, 11, 14, 0),
@@ -733,3 +647,14 @@ class TestSite:
                 observation.end_datetime.hour == 0 or observation.end_datetime.hour == 1
             )
             assert observation.site_id == 1
+        
+    def test_site_iter_in_order(self, mock_report_request_send, normal_site):
+        random.shuffle(normal_site._observations)
+        mock_report_request_send.return_value = normal_site.get_observations_list()
+        # new site should sort the observations in chronological order after getting them
+        sorted_site = Site(1, datetime(2025, 3, 10))
+        previous_datetime = None
+        for observation in sorted_site:
+            if previous_datetime is not None:
+                assert observation.end_datetime >= previous_datetime
+            previous_datetime = observation.end_datetime

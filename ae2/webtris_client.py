@@ -6,152 +6,7 @@ from collections.abc import Iterator
 from requests import request, HTTPError
 
 
-class WebTRISClient:
-    API_URL = "https://webtris.nationalhighways.co.uk/api/v1.0"
-
-
-class SitesRequest:
-    """
-    A class to request a list of all sites from the /sites endpoint.
-    `response` will hold the response in the form of `SitesRequest.Response` after the `send()` method is called.
-
-    Attributes
-    ----------
-    ENDPOINT: str, static
-        The endpoint for site requests on the API. This should not be changed.
-
-    Methods
-    -------
-    send() -> `SitesRequest.SitesResponse`
-        Sends a request to the API and returns the response. Throws errors if `not status.ok`. Otherwise silently excludes deformed data.
-    """
-
-    ENDPOINT = "/sites"  # The endpoint for requesting sites
-
-    @dataclass(frozen=True)
-    class SitesResponse:
-        """
-        The response type specific to the `SitesRequest` request type.
-        This class is a frozen dataclass and cannot have its attributes modified.
-
-        Attributes
-        ----------
-        row_count: int, readonly
-            The number of rows in the API response. May differ from `len(sites)` due to silent exclusion of faulty data.
-        sites: list[Response._Site], readonly
-            The list of all sites returned from the API.
-        """
-
-        @dataclass(frozen=True)
-        class _Site:
-            """
-            A frozen dataclass representing one site in a `SitesRequest.Response`
-
-            Attributes
-            ----------
-            id: int, readonly
-                The ID of the site
-            name: str, readonly
-                A human-readable description of the site's location
-            description: str, readonly
-                Location id by motorway/markerpost
-            longitude: float, readonly
-                The longitude of the location
-            latitude: float, readonly
-                The latitude of the location
-            status: str, readonly
-                Either "Active" or "Inactive"
-            """
-
-            id: int
-            name: str
-            description: str
-            longitude: float
-            latitude: float
-            status: str
-            
-            def __repr__(self) -> str:
-                return f"Site(id={self.id}, name='{self.name}', description='{self.description}', longitude={self.longitude}, latitude={self.latitude}, status='{self.status}')"
-            
-            def __str__(self) -> str:
-                return f"Site {self.id}: {self.name} ({self.description}) at ({self.latitude}, {self.longitude}), status: {self.status}"
-
-        row_count: int
-        sites: list[_Site]
-
-        @classmethod
-        def from_dict(cls, data: dict) -> "SitesRequest.SitesResponse":
-            sites_response = cls(row_count=data["row_count"], sites=[])
-            for site in data["sites"]:
-                # Check data for validity and silently exclude faulty sites
-                if not (
-                    "Id" in site
-                    and "Name" in site
-                    and "Description" in site
-                    and "Longitude" in site
-                    and "Latitude" in site
-                    and "Status" in site
-                ):
-                    print(f"Excluding site with missing field(s): {site}")
-                    continue  # Exclude API response sites missing a field
-                try:
-                    _ = int(site['Id'])
-                except ValueError:
-                    print(f"Excluding site with non-numeric ID `{site['Id']}`")
-                    continue  # Exclude non-numeric or missing ID's
-                if site['Description'] == "":
-                    print(f"Excluding site with empty description: {site}")
-                    continue
-                if site['Longitude'] == 0.0 or site['Latitude'] == 0.0:
-                    print(f"Excluding site with invalid longitude/latitude: {site}")
-                    continue  # Latitude and Longitude are 14-digit precise: won't be at exactly 0.0
-                if site['Status'] == "":
-                    print(f"Excluding site with empty status: {site}")
-                    continue
-
-                sites_response.sites.append(
-                    cls._Site(
-                        id=int(site["Id"]),
-                        name=site["Name"],
-                        description=site["Description"],
-                        longitude=site["Longitude"],
-                        latitude=site["Latitude"],
-                        status=site["Status"],
-                    )
-                )
-            return sites_response
-
-    def send(this) -> SitesResponse:
-        """
-        This method sends a request to the sites endpoint. It returns the response.
-        Raises errors when request completely fails; silently excludes faulty sites (any missing/invalid fields).
-        """
-
-        res = request(
-            method="GET",
-            url=f"{WebTRISClient.API_URL}{SitesRequest.ENDPOINT}",
-            timeout=5,
-        )
-        if res.status_code >= 400:
-            err = HTTPError(f"{res.status_code} Error: {res.reason}")
-            err.status_code = res.status_code
-            err.reason = res.reason
-            raise err
-        data = res.json()
-        sites_response = SitesRequest.SitesResponse.from_dict(data)
-        return sites_response
-
-    def __init__(this):
-        """
-        Returns a new SitesRequest object
-        """
-        pass
-    
-    def __repr__(self):
-        return f"SitesRequest()"
-    
-    def __str__(self):
-        return f"SitesRequest()"
+API_URL = "https://webtris.nationalhighways.co.uk/api/v1.0"
 
 
 class ReportRequest:
@@ -174,7 +29,7 @@ class ReportRequest:
 class DailyReportRequest(ReportRequest):
     """
     A class to be used to make requests to the WebTRIS API's daily report endpoint. This endpoint provides data in fifteen minute intervals.
-    A corresponding `FifteenMinuteObservation` class is used to support returns. Make a request by calling `.send()`
+    A corresponding `TrafficObservation` class is used to support returns. Make a request by calling `.send()`
 
     Attributes
     ----------
@@ -187,7 +42,7 @@ class DailyReportRequest(ReportRequest):
 
     Methods
     -------
-    send() -> `list[FifteenMinuteObservation]`
+    send() -> `list[TrafficObservation]`
         The send method which makes the call to the API and returns a list of observations. Can raise errors.
 
     """
@@ -228,13 +83,13 @@ class DailyReportRequest(ReportRequest):
         self.site_id = site_id
         self.date = date
 
-    def send(self) -> list["FifteenMinuteObservation"]:
+    def send(self) -> list["TrafficObservation"]:
         """
         Sends a request to the WebTRIS API. Gets the `/reports/daiy` endpoint and returns formatted data based on the API's response.
 
         Returns
         -------
-        list[FifteenMinuteObservation]
+        list[TrafficObservation]
             A list of observations of traffic flow for the day given when initializing the class. site_id, observation_end_datetime, average_speed, and vehicle_count
             can be relied upon in those observations as they will otherwise be excluded.
 
@@ -248,7 +103,7 @@ class DailyReportRequest(ReportRequest):
 
         res = request(
             method="GET",
-            url=WebTRISClient.API_URL + DailyReportRequest.ENDPOINT,
+            url=API_URL + DailyReportRequest.ENDPOINT,
             params={
                 "sites": self.site_id,
                 "start_date": self.date.strftime("%d%m%Y"),
@@ -259,17 +114,17 @@ class DailyReportRequest(ReportRequest):
         )
         res.raise_for_status()
         if res.status_code == 204:
-            return []  # No content, return empty list
+            return [] 
         data = res.json()
         if "Rows" not in data:
             raise ValueError(
                 "`Rows` not found in `DailyReportReportRequest.send()`. Required field to form data."
             )
-        observation_list: list[FifteenMinuteObservation] = []
+        observation_list: list[TrafficObservation] = []
         for observation in data["Rows"]:
             try:
                 observation_list.append(
-                    FifteenMinuteObservation.from_dict(self.site_id, observation)
+                    TrafficObservation.from_dict(self.site_id, observation)
                 )
             except (ValueError, TypeError):
                 # Silently exclude any faulty observations not containing full amounts of data
@@ -283,7 +138,7 @@ class DailyReportRequest(ReportRequest):
         return f"DailyReportRequest for site {self.site_id} on {self.date.strftime('%Y-%m-%d')}"
 
 
-class FifteenMinuteObservation:
+class TrafficObservation:
     """
     A class to represent a fifteen minute measurement of traffic data from the WebTRIS API.
 
@@ -320,7 +175,7 @@ class FifteenMinuteObservation:
     """
 
     @classmethod
-    def from_dict(cls, site_id: int, data: dict) -> "FifteenMinuteObservation":
+    def from_dict(cls, site_id: int, data: dict) -> "TrafficObservation":
         """
         Creates a new `FifteenMinutesObservation` object using key-value dictionary in the format provided by WebTRIS API.
 
@@ -343,13 +198,13 @@ class FifteenMinuteObservation:
 
         Returns
         -------
-        DailyReportRequest.FifteenMinuteObservation
+        DailyReportRequest.TrafficObservation
             A new `FifteenMinutesObservation` containing the data given.
         """
         dt = datetime.fromisoformat(data["Report Date"])
         if "Time Period Ending" not in data:
             raise ValueError(
-                "Cannot construct `FifteenMinuteObservation` from dict without valid timestamp"
+                "Cannot construct `TrafficObservation` from dict without valid timestamp"
             )
 
         time: list[int] = [
@@ -420,41 +275,41 @@ class FifteenMinuteObservation:
     ):
         if not isinstance(site_name, str) or site_name == "":
             raise ValueError(
-                "Cannot initialize FifteenMinuteObservation with no/empty name!"
+                "Cannot initialize TrafficObservation with no/empty name!"
             )
         self._site_name = site_name
 
         if not isinstance(site_id, int) or site_id <= 0:
             raise ValueError(
-                "Cannot initialize FifteenMinuteObservation with no/<=0 site_id!"
+                "Cannot initialize TrafficObservation with no/<=0 site_id!"
             )
         self._site_id = site_id
 
         if not isinstance(end_time, datetime) or end_time.timestamp() <= 0:
             raise ValueError(
-                "Cannot initialize FifteenMinuteObservation with no/<=0 end_time!"
+                "Cannot initialize TrafficObservation with no/<=0 end_time!"
             )
         self._observation_end_datetime = end_time
 
         if not isinstance(average_speed, (int, float)) or average_speed < 0:
             raise ValueError(
-                "Cannot initialize FifteenMinuteObservation with no/<0 average_speed!"
+                "Cannot initialize TrafficObservation with no/<0 average_speed!"
             )
         self._average_speed = average_speed
 
         if not isinstance(vehicle_count, int) or vehicle_count < 0:
             raise ValueError(
-                "Cannot initialize FifteenMinuteObservation with no/<0 vehicle_count!"
+                "Cannot initialize TrafficObservation with no/<0 vehicle_count!"
             )
         self._vehicle_count = vehicle_count
         
-    def __lt__(self, other: "FifteenMinuteObservation") -> bool:
+    def __lt__(self, other: "TrafficObservation") -> bool:
         """
-        Less-than operator for FifteenMinuteObservation. Compares based on end_datetime.
+        Less-than operator for TrafficObservation. Compares based on end_datetime.
 
         Parameters
         ----------
-        other : FifteenMinuteObservation
+        other : TrafficObservation
             The other observation to compare to
             
         Returns
@@ -464,13 +319,13 @@ class FifteenMinuteObservation:
         """
         return self.end_datetime < other.end_datetime
     
-    def __gt__(self, other: "FifteenMinuteObservation") -> bool:
+    def __gt__(self, other: "TrafficObservation") -> bool:
         """
-        Greater-than operator for FifteenMinuteObservation. Compares based on end_datetime.
+        Greater-than operator for TrafficObservation. Compares based on end_datetime.
 
         Parameters
         ----------
-        other : FifteenMinuteObservation
+        other : TrafficObservation
             The other observation to compare to
             
         Returns
@@ -481,7 +336,7 @@ class FifteenMinuteObservation:
     
     def __eq__(self, other: object) -> bool:
         """
-        Equality operator for FifteenMinuteObservation. Compares based on end_datetime.
+        Equality operator for TrafficObservation. Compares based on end_datetime.
 
         Parameters
         ----------
@@ -496,7 +351,7 @@ class FifteenMinuteObservation:
         return self.end_datetime == other.end_datetime
     
     def __repr__(self) -> str:
-        return f"FifteenMinuteObservation(site_name='{self.site_name}', site_id={self.site_id}, end_time='{self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}', average_speed={self.average_speed}, vehicle_count={self.vehicle_count})"
+        return f"TrafficObservation(site_name='{self.site_name}', site_id={self.site_id}, end_time='{self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}', average_speed={self.average_speed}, vehicle_count={self.vehicle_count})"
     
     def __str__(self) -> str:
         return f"Observation at site {self.site_name} (ID {self.site_id}) on {self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}: average speed {self.average_speed} mph, vehicle count {self.vehicle_count}"
@@ -518,7 +373,7 @@ class Site:
         The name of the site this object corresponds to. Obtained from the API when `.update_data()` is called.
     """
 
-    _observations: list[FifteenMinuteObservation]
+    _observations: list[TrafficObservation]
     _date: datetime
     _site_id: int
     _name: str
@@ -545,13 +400,13 @@ class Site:
         self._site_id = site_id
         self.update_data()
 
-    def get_observations_list(self) -> list[FifteenMinuteObservation]:
+    def get_observations_list(self) -> list[TrafficObservation]:
         """
         Returns a shallow copy of the observations related to this site
 
         Returns
         -------
-        list[FifteenMinuteObservation]
+        list[TrafficObservation]
             The shallow copy
         """
         return self._observations.copy()
@@ -595,13 +450,17 @@ class Site:
         float
             The average speed in mph for that hour
         """
+        if hour < 0 or hour > 23:
+            raise ValueError("Hour must be between 0 and 23 inclusive")
         total_weighted_speed = sum(
             o.average_speed * o.vehicle_count
             for o in self._observations
             if o.end_datetime.hour == hour
         )
         total_count = sum(
-            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
+            o.vehicle_count 
+            for o in self._observations 
+            if o.end_datetime.hour == hour
         )
         return total_weighted_speed / total_count if total_count > 0 else 0.0
 
@@ -630,8 +489,12 @@ class Site:
         int
             The total vehicle count over that hour
         """
+        if hour < 0 or hour > 23:
+            raise ValueError("Hour must be between 0 and 23 inclusive")
         return sum(
-            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
+            o.vehicle_count 
+            for o in self._observations 
+            if o.end_datetime.hour == hour
         )
 
     def get_peak_hour(self) -> int:
@@ -654,7 +517,7 @@ class Site:
             max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else 0
         )  # Return hour with most vehicles
 
-    def get_records_for_hour(self, hour: int) -> list[FifteenMinuteObservation]:
+    def get_records_for_hour(self, hour: int) -> list[TrafficObservation]:
         """
         Gets all records where observation.end_datetime.hour == hour
 
@@ -670,7 +533,7 @@ class Site:
 
         Returns
         -------
-        list[FifteenMinuteObservation]
+        list[TrafficObservation]
             All records in that hour
         """
         if hour < 0 or hour > 23:
@@ -679,13 +542,14 @@ class Site:
 
     def __getitem__(
         self, key: int | slice
-    ) -> FifteenMinuteObservation | list[FifteenMinuteObservation]:
+    ) -> TrafficObservation | list[TrafficObservation]:
         return self._observations[key]
 
     def __len__(self):
         return len(self._observations)
 
-    def __iter__(self) -> Iterator[FifteenMinuteObservation]:
+    def __iter__(self) -> Iterator[TrafficObservation]:
+        # Guaranteed to be in chronological order due to sorting in `update_data()`
         for o in self._observations:
             yield o
             
