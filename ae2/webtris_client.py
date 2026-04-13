@@ -1,9 +1,8 @@
 """All classes for the application"""
 
-from dataclasses import dataclass
 from datetime import datetime
 from collections.abc import Iterator
-from requests import request, HTTPError
+from requests import request
 
 
 API_URL = "https://webtris.nationalhighways.co.uk/api/v1.0"
@@ -114,7 +113,7 @@ class DailyReportRequest(ReportRequest):
         )
         res.raise_for_status()
         if res.status_code == 204:
-            return [] 
+            return []
         data = res.json()
         if "Rows" not in data:
             raise ValueError(
@@ -130,10 +129,10 @@ class DailyReportRequest(ReportRequest):
                 # Silently exclude any faulty observations not containing full amounts of data
                 continue
         return observation_list
-    
+
     def __repr__(self):
         return f"DailyReportRequest(site_id={self.site_id}, date={self.date.strftime('%Y-%m-%d')})"
-    
+
     def __str__(self):
         return f"DailyReportRequest for site {self.site_id} on {self.date.strftime('%Y-%m-%d')}"
 
@@ -274,9 +273,7 @@ class TrafficObservation:
         vehicle_count: int,
     ):
         if not isinstance(site_name, str) or site_name == "":
-            raise ValueError(
-                "Cannot initialize TrafficObservation with no/empty name!"
-            )
+            raise ValueError("Cannot initialize TrafficObservation with no/empty name!")
         self._site_name = site_name
 
         if not isinstance(site_id, int) or site_id <= 0:
@@ -302,7 +299,7 @@ class TrafficObservation:
                 "Cannot initialize TrafficObservation with no/<0 vehicle_count!"
             )
         self._vehicle_count = vehicle_count
-        
+
     def __lt__(self, other: "TrafficObservation") -> bool:
         """
         Less-than operator for TrafficObservation. Compares based on end_datetime.
@@ -311,14 +308,14 @@ class TrafficObservation:
         ----------
         other : TrafficObservation
             The other observation to compare to
-            
+
         Returns
         -------
         bool
             True if this observation's end_datetime is less than the other observation's end_datetime, False otherwise
         """
         return self.end_datetime < other.end_datetime
-    
+
     def __gt__(self, other: "TrafficObservation") -> bool:
         """
         Greater-than operator for TrafficObservation. Compares based on end_datetime.
@@ -327,13 +324,13 @@ class TrafficObservation:
         ----------
         other : TrafficObservation
             The other observation to compare to
-            
+
         Returns
         bool
             True if this observation's end_datetime is greater than the other observation's end_datetime, False otherwise
         """
         return self.end_datetime > other.end_datetime
-    
+
     def __eq__(self, other: object) -> bool:
         """
         Equality operator for TrafficObservation. Compares based on end_datetime.
@@ -342,20 +339,19 @@ class TrafficObservation:
         ----------
         other : object
             The other observation to compare to
-        
+
         Returns
         -------
         bool
             True if this observation's end_datetime is equal to the other observation's end_datetime, False otherwise
         """
         return self.end_datetime == other.end_datetime
-    
+
     def __repr__(self) -> str:
         return f"TrafficObservation(site_name='{self.site_name}', site_id={self.site_id}, end_time='{self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}', average_speed={self.average_speed}, vehicle_count={self.vehicle_count})"
-    
+
     def __str__(self) -> str:
         return f"Observation at site {self.site_name} (ID {self.site_id}) on {self.end_datetime.strftime('%Y-%m-%d %H:%M:%S')}: average speed {self.average_speed} mph, vehicle count {self.vehicle_count}"
-        
 
 
 class Site:
@@ -377,7 +373,7 @@ class Site:
     _date: datetime
     _site_id: int
     _name: str
-    
+
     @property
     def date(self) -> datetime:
         return self._date
@@ -390,7 +386,7 @@ class Site:
     @property
     def site_id(self) -> int:
         return self._site_id
-    
+
     @property
     def name(self) -> str:
         return self._name
@@ -418,7 +414,11 @@ class Site:
         requestor = DailyReportRequest(site_id=self.site_id, date=self.date)
         self._observations = requestor.send()
         self._observations.sort()
-        self._name = self._observations[0].site_name if len(self._observations) > 0 else "Unknown Site"
+        self._name = (
+            self._observations[0].site_name
+            if len(self._observations) > 0
+            else "Unknown Site"
+        )
 
     def get_average_speed(self) -> float:
         """
@@ -458,9 +458,7 @@ class Site:
             if o.end_datetime.hour == hour
         )
         total_count = sum(
-            o.vehicle_count 
-            for o in self._observations 
-            if o.end_datetime.hour == hour
+            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
         )
         return total_weighted_speed / total_count if total_count > 0 else 0.0
 
@@ -492,9 +490,7 @@ class Site:
         if hour < 0 or hour > 23:
             raise ValueError("Hour must be between 0 and 23 inclusive")
         return sum(
-            o.vehicle_count 
-            for o in self._observations 
-            if o.end_datetime.hour == hour
+            o.vehicle_count for o in self._observations if o.end_datetime.hour == hour
         )
 
     def get_peak_hour(self) -> int:
@@ -552,9 +548,9 @@ class Site:
         # Guaranteed to be in chronological order due to sorting in `update_data()`
         for o in self._observations:
             yield o
-            
+
     def __repr__(self) -> str:
         return f"Site(site_id={self.site_id}, name='{self.name}', date='{self.date.strftime('%Y-%m-%d')}', observations={self._observations})"
-    
+
     def __str__(self) -> str:
         return f"Site {self.site_id} ({self.name}) on {self.date.strftime('%Y-%m-%d')} with {len(self._observations)} observations"

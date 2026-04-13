@@ -5,7 +5,6 @@ import random
 import pytest
 from datetime import datetime
 from unittest.mock import patch, Mock
-from requests.exceptions import Timeout, ConnectionError, HTTPError
 
 from webtris_client import (
     Site,
@@ -647,7 +646,7 @@ class TestSite:
                 observation.end_datetime.hour == 0 or observation.end_datetime.hour == 1
             )
             assert observation.site_id == 1
-        
+
     def test_site_iter_in_order(self, mock_report_request_send, normal_site):
         random.shuffle(normal_site._observations)
         mock_report_request_send.return_value = normal_site.get_observations_list()

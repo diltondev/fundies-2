@@ -1,15 +1,16 @@
 """Demonstration on how to use the application"""
+
 from datetime import datetime
-from webtris_client import Site, TrafficObservation, DailyReportRequest
+from webtris_client import Site
 
 if __name__ == "__main__":
     site_id = input("Enter a site ID: ")
-    try: 
+    try:
         site_id = int(site_id)
     except ValueError:
         print("Invalid site ID. Please enter a valid integer.")
         exit(1)
-    
+
     date = input("Enter a date (YYYY-MM-DD): ")
     try:
         date = datetime.strptime(date, "%Y-%m-%d")
@@ -23,8 +24,10 @@ if __name__ == "__main__":
     print(f"Average Speed: {site.get_average_speed()} mph")
     print(f"Vehicle Count: {site.get_vehicle_count()}")
     peak_hour = site.get_peak_hour()
-    print(f"Peak Hour: {peak_hour} ({site.get_hourly_vehicle_count(peak_hour)} vehicles)")
-    
+    print(
+        f"Peak Hour: {peak_hour} ({site.get_hourly_vehicle_count(peak_hour)} vehicles)"
+    )
+
     """
     Example usage:
     Enter a site ID: 14
@@ -35,5 +38,3 @@ if __name__ == "__main__":
     Vehicle Count: 12431
     Peak Hour: 8 (1094 vehicles)
     """
-        
-    
