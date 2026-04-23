@@ -1,0 +1,15 @@
+digraph "classes_webtris_graph" {
+rankdir=BT
+charset="utf-8"
+splines="ortho"
+"webtris_graph.BreadthFirstSearch" [color="black", fontcolor="black", label=<{BreadthFirstSearch|<br ALIGN="LEFT"/>|search(head: RouteSegment, target: RouteSegment): list[RouteSegment]<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.DepthFirstSearch" [color="black", fontcolor="black", label=<{DepthFirstSearch|<br ALIGN="LEFT"/>|search(head: RouteSegment, target: RouteSegment): list[RouteSegment]<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.DijkstrasAlgoSearch" [color="black", fontcolor="black", label=<{DijkstrasAlgoSearch|<br ALIGN="LEFT"/>|search(head: RouteSegment, target: RouteSegment): list[RouteSegment]<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.RouteSegment" [color="black", fontcolor="black", label=<{RouteSegment|date : datetime<br ALIGN="LEFT"/>length : float<br ALIGN="LEFT"/>name : str<br ALIGN="LEFT"/>next_segments : list['RouteSegment']<br ALIGN="LEFT"/>sites : list[Site]<br ALIGN="LEFT"/>|append_site_by_id(new_site_id: int): None<br ALIGN="LEFT"/>get_average_speed(): float<br ALIGN="LEFT"/>get_traversal_time(): float<br ALIGN="LEFT"/>remove_site_by_id(old_site_id: int): None<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.RouteSegmentExternal" [color="black", fontcolor="black", label=<{RouteSegmentExternal|avg_speed : float<br ALIGN="LEFT"/>|get_average_speed(): float<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.SearchStrategy" [color="black", fontcolor="black", label=<{SearchStrategy|<br ALIGN="LEFT"/>|<I>search</I>(head: RouteSegment, target: RouteSegment): list[RouteSegment]<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"webtris_graph.BreadthFirstSearch" -> "webtris_graph.SearchStrategy" [arrowhead="empty", arrowtail="none"];
+"webtris_graph.DepthFirstSearch" -> "webtris_graph.SearchStrategy" [arrowhead="empty", arrowtail="none"];
+"webtris_graph.DijkstrasAlgoSearch" -> "webtris_graph.SearchStrategy" [arrowhead="empty", arrowtail="none"];
+"webtris_graph.RouteSegmentExternal" -> "webtris_graph.RouteSegment" [arrowhead="empty", arrowtail="none"];
+}

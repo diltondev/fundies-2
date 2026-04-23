@@ -1,0 +1,7 @@
+digraph "packages_webtris_graph" {
+rankdir=BT
+charset="utf-8"
+"webtris_client" [color="black", label=<webtris_client>, shape="box", style="solid"];
+"webtris_graph" [color="black", label=<webtris_graph>, shape="box", style="solid"];
+"webtris_graph" -> "webtris_client" [arrowhead="open", arrowtail="none"];
+}
